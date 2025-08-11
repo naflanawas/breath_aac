@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Large / generated files (never commit)
+data_raw/
+data_std/
+/features/
+# Model files
+*.npy
+*.pt
+*.wav
+*.zip
+wandb/
+outputs/
+
+# Notebooks cruft
+*.ipynb_checkpoints/
