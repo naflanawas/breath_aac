@@ -1,0 +1,4 @@
+cat > manifests/files.csv << 'EOF'
+filepath,subject_id,label,split,std_wav,mel_npy
+data_std/dates/breathing-deep.wav,S001,unknown,train,data_std/dates/breathing-deep.wav,features/mel/breathing-deep.npy
+EOF
