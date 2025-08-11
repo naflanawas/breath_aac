@@ -1,4 +1,7 @@
-cat > manifests/files.csv << 'EOF'
 filepath,subject_id,label,split,std_wav,mel_npy
+data_std/dates/breathing-deep 2.wav,S001,unknown,train,data_std/dates/breathing-deep 2.wav,features/mel/breathing-deep 2.npy
+data_std/dates/breathing-deep 3.wav,S001,unknown,train,data_std/dates/breathing-deep 3.wav,features/mel/breathing-deep 3.npy
 data_std/dates/breathing-deep.wav,S001,unknown,train,data_std/dates/breathing-deep.wav,features/mel/breathing-deep.npy
-EOF
+data_std/dates/breathing-shallow 2.wav,S001,unknown,train,data_std/dates/breathing-shallow 2.wav,features/mel/breathing-shallow 2.npy
+data_std/dates/breathing-shallow 3.wav,S001,unknown,train,data_std/dates/breathing-shallow 3.wav,features/mel/breathing-shallow 3.npy
+data_std/dates/breathing-shallow.wav,S001,unknown,train,data_std/dates/breathing-shallow.wav,features/mel/breathing-shallow.npy
