@@ -2,6 +2,16 @@ import argparse, numpy as np, pandas as pd, torch, torch.nn as nn, torch.optim a
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
 
+# ---- reproducible training (seed everything) ----
+import os, random, numpy as np, torch
+SEED = 7
+os.environ["PYTHONHASHSEED"] = str(SEED)
+random.seed(SEED); np.random.seed(SEED); torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 # ---------- Dataset ----------
 class MelClipSet(Dataset):
     def __init__(self, split_csv, split, max_len=256, classes=None):
@@ -94,9 +104,10 @@ def main(a):
     valset   = MelClipSet(a.split_csv, "val",   max_len=a.max_len, classes=classes)
     testset  = MelClipSet(a.split_csv, "test",  max_len=a.max_len, classes=classes)
 
-    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True,  num_workers=0)
-    va = DataLoader(valset,   batch_size=a.bs, shuffle=False, num_workers=0)
-    te = DataLoader(testset,  batch_size=a.bs, shuffle=False, num_workers=0)
+    g = torch.Generator().manual_seed(SEED)  # add this
+    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True,  num_workers=0, generator=g)
+    va = DataLoader(valset,   batch_size=a.bs, shuffle=False, num_workers=0, generator=g)
+    te = DataLoader(testset,  batch_size=a.bs, shuffle=False, num_workers=0, generator=g)
 
     model = MSTCN(in_ch=3, n_classes=n_classes).to(device)
     w = class_weights(a.split_csv, classes).to(device)

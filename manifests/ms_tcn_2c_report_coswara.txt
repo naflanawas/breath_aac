@@ -1,0 +1,15 @@
+epoch 00 | val_acc 0.197 | val_f1 0.164
+epoch 01 | val_acc 0.803 | val_f1 0.445
+epoch 02 | val_acc 0.803 | val_f1 0.445
+epoch 03 | val_acc 0.225 | val_f1 0.205
+epoch 04 | val_acc 0.803 | val_f1 0.445
+epoch 05 | val_acc 0.803 | val_f1 0.445
+epoch 06 | val_acc 0.573 | val_f1 0.540
+epoch 07 | val_acc 0.758 | val_f1 0.668
+epoch 08 | val_acc 0.573 | val_f1 0.536
+epoch 09 | val_acc 0.820 | val_f1 0.615
+epoch 10 | val_acc 0.573 | val_f1 0.540
+epoch 11 | val_acc 0.674 | val_f1 0.610
+epoch 12 | val_acc 0.607 | val_f1 0.567
+epoch 13 | val_acc 0.657 | val_f1 0.608
+TEST acc 0.737 | TEST f1 0.604 | saved models/ms_tcn_2c_coswara.pt

@@ -92,9 +92,15 @@ def main():
         logits = model(X)
         probs  = torch.softmax(logits, dim=1).cpu().numpy()[0]
         top_i  = int(probs.argmax())
+        thresh = 0.65   # only act if at least 65% confident
+        if probs[top_i] < thresh:
+            print(f"Unsure: {classes[top_i]} (conf={probs[top_i]:.3f} < {thresh}). No action.")
+            raise SystemExit(0)
+
         print(f"Predicted: {classes[top_i]}  (confidence={probs[top_i]:.3f})")
         for i,c in enumerate(classes):
             print(f"  {c:>5}: {probs[i]:.3f}")
 
 if __name__ == "__main__":
     main()
+    

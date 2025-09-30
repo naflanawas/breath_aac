@@ -15,3 +15,12 @@ Confusion:
  [1 5]]
 ProtoNet 5-shot  VAL acc=1.000  f1=1.000
 ProtoNet 10-shot  VAL acc=1.000  f1=1.000
+epoch 00 | val_acc 0.286 | val_f1 0.222
+epoch 01 | val_acc 1.000 | val_f1 1.000
+epoch 02 | val_acc 1.000 | val_f1 1.000
+epoch 03 | val_acc 1.000 | val_f1 1.000
+epoch 04 | val_acc 0.857 | val_f1 0.844
+epoch 05 | val_acc 0.857 | val_f1 0.844
+epoch 06 | val_acc 1.000 | val_f1 1.000
+epoch 07 | val_acc 1.000 | val_f1 1.000
+TEST acc 0.889 | TEST f1 0.862 | saved models/ms_tcn_2c.pt
