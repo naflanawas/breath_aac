@@ -1,3 +1,4 @@
+# Segment audio files into "short" and "long" gesture clips based on RMS energy bursts.
 import argparse, pathlib, pandas as pd, numpy as np, librosa, soundfile as sf
 from scipy.signal import butter, lfilter
 
