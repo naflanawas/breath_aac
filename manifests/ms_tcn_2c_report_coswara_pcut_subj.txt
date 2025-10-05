@@ -1,0 +1,36 @@
+epoch 00 | val_acc 0.462 | val_f1 0.316
+epoch 01 | val_acc 0.651 | val_f1 0.596
+epoch 02 | val_acc 0.632 | val_f1 0.551
+epoch 03 | val_acc 0.679 | val_f1 0.670
+epoch 04 | val_acc 0.632 | val_f1 0.542
+epoch 05 | val_acc 0.774 | val_f1 0.774
+epoch 06 | val_acc 0.802 | val_f1 0.792
+epoch 07 | val_acc 0.755 | val_f1 0.755
+epoch 08 | val_acc 0.689 | val_f1 0.680
+epoch 09 | val_acc 0.849 | val_f1 0.846
+epoch 10 | val_acc 0.783 | val_f1 0.781
+epoch 11 | val_acc 0.849 | val_f1 0.848
+epoch 12 | val_acc 0.877 | val_f1 0.875
+epoch 13 | val_acc 0.840 | val_f1 0.838
+epoch 14 | val_acc 0.811 | val_f1 0.811
+epoch 15 | val_acc 0.840 | val_f1 0.836
+epoch 16 | val_acc 0.858 | val_f1 0.857
+epoch 17 | val_acc 0.849 | val_f1 0.848
+epoch 18 | val_acc 0.849 | val_f1 0.848
+TEST acc 0.748 | TEST f1 0.734 | saved models/ms_tcn_2c_coswara_pcut_subj.pt
+PCUT SUBJECT-WISE  TEST acc=0.748  f1=0.734
+
+Report:
+              precision    recall  f1-score   support
+
+        long      0.667     0.984     0.795        61
+       short      0.970     0.516     0.674        62
+
+    accuracy                          0.748       123
+   macro avg      0.818     0.750     0.734       123
+weighted avg      0.819     0.748     0.734       123
+
+Confusion:
+[[60  1]
+ [30 32]]
+
