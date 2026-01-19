@@ -51,7 +51,9 @@ def main():
 
     done = skipped = failed = 0
     for w, label in tqdm(records, desc="Mel+Δ/ΔΔ (stacked)"):
-        out_path = out_root / label / f"{w.stem}.npy"
+        subject = w.parent.parent.name  
+        out_path = out_root / subject / label / f"{w.stem}.npy"
+
         if out_path.exists() and not args.overwrite:
             skipped += 1
             continue

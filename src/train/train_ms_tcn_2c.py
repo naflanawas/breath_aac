@@ -1,65 +1,114 @@
-import argparse, numpy as np, pandas as pd, torch, torch.nn as nn, torch.optim as optim
+import argparse
+import os, random
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
 
-# ---- reproducible training (seed everything) ----
-import os, random, numpy as np, torch
+# ---- reproducibility ----
 SEED = 7
 os.environ["PYTHONHASHSEED"] = str(SEED)
-random.seed(SEED); np.random.seed(SEED); torch.manual_seed(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
 if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-# ---------- Dataset ----------
+
+# ================= DATASET =================
 class MelClipSet(Dataset):
     def __init__(self, split_csv, split, max_len=256, classes=None):
         df = pd.read_csv(split_csv)
-        self.df = df[df["split"]==split].reset_index(drop=True)
+        self.df = df[df["split"] == split].reset_index(drop=True)
+
         if classes is None:
-            classes = sorted(df[df["split"]=="train"]["label"].unique())
+            classes = sorted(df[df["split"] == "train"]["label"].unique())
+
         self.classes = classes
-        self.c2i = {c:i for i,c in enumerate(self.classes)}
+        self.c2i = {c: i for i, c in enumerate(self.classes)}
         self.max_len = max_len
-    def __len__(self): return len(self.df)
+
+    def __len__(self):
+        return len(self.df)
+
     def __getitem__(self, i):
         row = self.df.iloc[i]
         x = np.load(row["filepath"])  # [3, 64, T]
+
+        # ---- CMVN (per-clip normalization) ----
+        mean = x.mean(axis=(1, 2), keepdims=True)
+        std  = x.std(axis=(1, 2), keepdims=True) + 1e-8
+        x = (x - mean) / std
+
+        # ---- Pad / Crop ----
         T = x.shape[-1]
         if T < self.max_len:
             pad = np.zeros((x.shape[0], x.shape[1], self.max_len - T), dtype=x.dtype)
             x = np.concatenate([x, pad], axis=-1)
         elif T > self.max_len:
             x = x[:, :, :self.max_len]
+
+        # ---- SpecAugment (TRAIN ONLY) ----
+        if self.df.iloc[i]["split"] == "train":
+            # frequency mask
+            f = np.random.randint(0, 8)
+            f0 = np.random.randint(0, max(1, x.shape[1] - f))
+            x[:, f0:f0+f, :] = 0
+
+            # time mask
+            t = np.random.randint(0, 80)
+            t0 = np.random.randint(0, max(1, x.shape[2] - t))
+            x[:, :, t0:t0+t] = 0
+
         y = self.c2i[row["label"]]
         return torch.from_numpy(x), torch.tensor(y, dtype=torch.long)
 
-# ---------- Model ----------
+
+# ================= MODEL =================
 class TCNBlock(nn.Module):
     def __init__(self, ch, k=3, dil=1):
         super().__init__()
-        pad = ((k-1)//2) * dil
+        pad = ((k - 1) // 2) * dil
         self.net = nn.Sequential(
-            nn.Conv2d(ch, ch, (1,k), padding=(0,pad), dilation=(1,dil)),
+            nn.Conv2d(ch, ch, (1, k), padding=(0, pad), dilation=(1, dil)),
             nn.ReLU(inplace=True),
-            nn.Conv2d(ch, ch, (1,k), padding=(0,pad), dilation=(1,dil)),
+            nn.Conv2d(ch, ch, (1, k), padding=(0, pad), dilation=(1, dil)),
             nn.ReLU(inplace=True),
         )
-    def forward(self, x): return x + self.net(x)
+
+    def forward(self, x):
+        return x + self.net(x)
+
 
 class MSTCN(nn.Module):
-    def __init__(self, in_ch=3, base=64, n_classes=2, dilations=(1,2,4,8)):
+    def __init__(self, in_ch=3, base=64, n_classes=2, dilations=(1, 2, 4, 8)):
         super().__init__()
         self.stem = nn.Sequential(
-            nn.Conv2d(in_ch, base, (5,5), padding=(2,2)), nn.ReLU(inplace=True),
-            nn.Conv2d(base, base, (3,3), padding=(1,1)), nn.ReLU(inplace=True),
+            nn.Conv2d(in_ch, base, (5, 5), padding=(2, 2)),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(base, base, (3, 3), padding=(1, 1)),
+            nn.ReLU(inplace=True),
         )
+
         self.branches = nn.ModuleList([
-            nn.Sequential(TCNBlock(base, k=3, dil=d), TCNBlock(base, k=3, dil=d)) for d in dilations
+            nn.Sequential(
+                TCNBlock(base, k=3, dil=d),
+                TCNBlock(base, k=3, dil=d)
+            ) for d in dilations
         ])
-        self.fuse = nn.Conv2d(base*len(dilations), base, 1)
-        self.head = nn.Sequential(nn.AdaptiveAvgPool2d((1,1)), nn.Flatten(), nn.Linear(base, n_classes))
+
+        self.fuse = nn.Conv2d(base * len(dilations), base, 1)
+        self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(base, n_classes)
+        )
+
     def forward(self, x):
         h = self.stem(x)
         feats = [b(h) for b in self.branches]
@@ -67,81 +116,102 @@ class MSTCN(nn.Module):
         h = self.fuse(h)
         return self.head(h)
 
-# ---------- Utils ----------
+
+# ================= UTILS =================
 def pick_device():
-    if torch.backends.mps.is_available(): return "mps"   # Apple Silicon
-    if torch.cuda.is_available(): return "cuda"
+    if torch.cuda.is_available():
+        return "cuda"
     return "cpu"
+
 
 def class_weights(split_csv, classes):
     df = pd.read_csv(split_csv)
-    tr = df[df.split=="train"].label.value_counts().to_dict()
-    counts = torch.tensor([tr.get(c,1) for c in classes], dtype=torch.float32)
+    tr = df[df.split == "train"].label.value_counts().to_dict()
+    counts = torch.tensor([tr.get(c, 1) for c in classes], dtype=torch.float32)
     w = 1.0 / counts
-    w = w * (len(classes) / w.sum())
-    return w
+    return w * (len(classes) / w.sum())
+
 
 def evaluate(model, loader, device):
-    model.eval(); ys=[]; ps=[]
+    model.eval()
+    ys, ps = [], []
     with torch.no_grad():
-        for X,y in loader:
-            X=X.to(device); y=y.to(device)
+        for X, y in loader:
+            X, y = X.to(device), y.to(device)
             logits = model(X)
-            p = logits.argmax(1)
-            ys += y.cpu().tolist(); ps += p.cpu().tolist()
-    acc = accuracy_score(ys, ps)
-    f1  = f1_score(ys, ps, average="macro")
-    return acc, f1
+            ps.extend(logits.argmax(1).cpu().tolist())
+            ys.extend(y.cpu().tolist())
 
-# ---------- Train ----------
+    return accuracy_score(ys, ps), f1_score(ys, ps, average="macro")
+
+
+# ================= TRAIN =================
 def main(a):
     device = pick_device()
+
     df = pd.read_csv(a.split_csv)
-    classes = sorted(df[df.split=="train"].label.unique())
-    n_classes = len(classes)
+    classes = sorted(df[df.split == "train"].label.unique())
 
-    trainset = MelClipSet(a.split_csv, "train", max_len=a.max_len, classes=classes)
-    valset   = MelClipSet(a.split_csv, "val",   max_len=a.max_len, classes=classes)
-    testset  = MelClipSet(a.split_csv, "test",  max_len=a.max_len, classes=classes)
+    trainset = MelClipSet(a.split_csv, "train", a.max_len, classes)
+    valset   = MelClipSet(a.split_csv, "val",   a.max_len, classes)
+    testset  = MelClipSet(a.split_csv, "test",  a.max_len, classes)
 
-    g = torch.Generator().manual_seed(SEED)  # add this
-    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True,  num_workers=0, generator=g)
-    va = DataLoader(valset,   batch_size=a.bs, shuffle=False, num_workers=0, generator=g)
-    te = DataLoader(testset,  batch_size=a.bs, shuffle=False, num_workers=0, generator=g)
+    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True)
+    va = DataLoader(valset,   batch_size=a.bs)
+    te = DataLoader(testset,  batch_size=a.bs)
 
-    model = MSTCN(in_ch=3, n_classes=n_classes).to(device)
-    w = class_weights(a.split_csv, classes).to(device)
-    crit = nn.CrossEntropyLoss(weight=w)
+    model = MSTCN(n_classes=len(classes)).to(device)
+    crit = nn.CrossEntropyLoss(weight=class_weights(a.split_csv, classes).to(device))
     opt  = optim.Adam(model.parameters(), lr=a.lr)
 
-    best_f1 = -1; patience = a.patience; bad=0
+    best_f1, bad = -1, 0
     for ep in range(a.epochs):
         model.train()
-        for X,y in tr:
-            X=X.to(device); y=y.to(device)
-            opt.zero_grad(); logits=model(X); loss=crit(logits,y); loss.backward(); opt.step()
+        for X, y in tr:
+            X, y = X.to(device), y.to(device)
+            opt.zero_grad()
+            loss = crit(model(X), y)
+            loss.backward()
+            opt.step()
+
         va_acc, va_f1 = evaluate(model, va, device)
         print(f"epoch {ep:02d} | val_acc {va_acc:.3f} | val_f1 {va_f1:.3f}")
+
         if va_f1 > best_f1:
-            best_f1 = va_f1; bad = 0
+            best_f1 = va_f1
+            bad = 0
             torch.save(model.state_dict(), a.ckpt)
         else:
             bad += 1
-            if bad >= patience: break
+            if bad >= a.patience:
+                break
 
-    # test
-    model.load_state_dict(torch.load(a.ckpt, map_location=device))
+    model.load_state_dict(torch.load(a.ckpt))
     te_acc, te_f1 = evaluate(model, te, device)
-    print(f"TEST acc {te_acc:.3f} | TEST f1 {te_f1:.3f} | saved {a.ckpt}")
+    print(f"TEST acc {te_acc:.3f} | TEST f1 {te_f1:.3f}")
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--split_csv", default="manifests/split_2c.csv")
+    ap.add_argument("--split_csv", required=True)
     ap.add_argument("--epochs", type=int, default=40)
-    ap.add_argument("--bs", type=int, default=16)
-    ap.add_argument("--max_len", type=int, default=256)   # ~4.1 s @ 16k/256
-    ap.add_argument("--lr", type=float, default=2e-3)
+    ap.add_argument("--bs", type=int, default=8)
+    ap.add_argument("--max_len", type=int, default=1024)
+    ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--patience", type=int, default=6)
-    ap.add_argument("--ckpt", default="models/ms_tcn_2c.pt")
-    a = ap.parse_args()
-    main(a)
+    ap.add_argument("--ckpt", default="models/ms_tcn_cmvn_aug.pt")
+
+    # Check if running in an interactive notebook environment (e.g., Colab)
+    # In such an environment, sys.argv might not contain expected command-line arguments.
+    # We provide explicit default arguments for interactive execution.
+    if '__file__' not in globals(): # Heuristic for notebook environment
+        args = ap.parse_args([
+            "--split_csv", "manifests/split_2c_subjectwise.csv",
+            "--max_len", "1024",
+            "--bs", "8",
+            "--ckpt", "models/ms_tcn_cmvn_aug.pt" # Default checkpoint name for this updated script
+        ])
+    else:
+        args = ap.parse_args() # For command-line execution, use sys.argv
+
+    main(args)
