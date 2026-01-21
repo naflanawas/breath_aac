@@ -147,6 +147,11 @@ def evaluate(model, loader, device):
 
 # ================= TRAIN =================
 def main(a):
+    # ---- metric logging ----
+    train_losses = []
+    val_accs = []
+    val_f1s = []
+
     device = pick_device()
 
     df = pd.read_csv(a.split_csv)
@@ -167,6 +172,8 @@ def main(a):
     best_f1, bad = -1, 0
     for ep in range(a.epochs):
         model.train()
+        running_loss = 0.0
+
         for X, y in tr:
             X, y = X.to(device), y.to(device)
             opt.zero_grad()
@@ -174,8 +181,22 @@ def main(a):
             loss.backward()
             opt.step()
 
+            running_loss += loss.item()
+
+        avg_train_loss = running_loss / len(tr)
+        train_losses.append(avg_train_loss)
+
+
         va_acc, va_f1 = evaluate(model, va, device)
-        print(f"epoch {ep:02d} | val_acc {va_acc:.3f} | val_f1 {va_f1:.3f}")
+        val_accs.append(va_acc)
+        val_f1s.append(va_f1)
+
+        print(
+            f"epoch {ep:02d} | "
+            f"train_loss {avg_train_loss:.4f} | "
+            f"val_acc {va_acc:.3f} | "
+            f"val_f1 {va_f1:.3f}"
+        )
 
         if va_f1 > best_f1:
             best_f1 = va_f1
@@ -185,6 +206,12 @@ def main(a):
             bad += 1
             if bad >= a.patience:
                 break
+
+    # ---------------- SAVE TRAINING CURVES ----------------
+    os.makedirs("logs", exist_ok=True)
+    np.save("logs/train_loss.npy", np.array(train_losses))
+    np.save("logs/val_acc.npy", np.array(val_accs))
+    np.save("logs/val_f1.npy", np.array(val_f1s))
 
     model.load_state_dict(torch.load(a.ckpt))
     te_acc, te_f1 = evaluate(model, te, device)
