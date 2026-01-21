@@ -169,7 +169,7 @@ def main(a):
     crit = nn.CrossEntropyLoss(weight=class_weights(a.split_csv, classes).to(device))
     opt  = optim.Adam(model.parameters(), lr=a.lr)
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(opt,mode="max",factor=0.5,patience=2,min_lr=1e-6,verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(opt,mode="max",factor=0.5,patience=2,min_lr=1e-6)
 
     best_f1, bad = -1, 0
     for ep in range(a.epochs):
