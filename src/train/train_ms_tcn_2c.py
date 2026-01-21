@@ -161,13 +161,15 @@ def main(a):
     valset   = MelClipSet(a.split_csv, "val",   a.max_len, classes)
     testset  = MelClipSet(a.split_csv, "test",  a.max_len, classes)
 
-    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True)
-    va = DataLoader(valset,   batch_size=a.bs)
-    te = DataLoader(testset,  batch_size=a.bs)
+    tr = DataLoader(trainset, batch_size=a.bs, shuffle=True, num_workers=2)
+    va = DataLoader(valset,   batch_size=a.bs, num_workers=2)
+    te = DataLoader(testset,  batch_size=a.bs, num_workers=2)
 
     model = MSTCN(n_classes=len(classes)).to(device)
     crit = nn.CrossEntropyLoss(weight=class_weights(a.split_csv, classes).to(device))
     opt  = optim.Adam(model.parameters(), lr=a.lr)
+
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(opt,mode="max",factor=0.5,patience=2,min_lr=1e-6,verbose=True)
 
     best_f1, bad = -1, 0
     for ep in range(a.epochs):
@@ -190,6 +192,8 @@ def main(a):
         va_acc, va_f1 = evaluate(model, va, device)
         val_accs.append(va_acc)
         val_f1s.append(va_f1)
+
+        scheduler.step(va_f1)
 
         print(
             f"epoch {ep:02d} | "
