@@ -103,18 +103,25 @@ class MSTCN(nn.Module):
         ])
 
         self.fuse = nn.Conv2d(base * len(dilations), base, 1)
-        self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-            nn.Linear(base, n_classes)
-        )
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.embed = nn.Linear(base, base)
+        self.classifier = nn.Linear(base, n_classes)
 
-    def forward(self, x):
+
+    def forward(self, x, return_embedding=False):
         h = self.stem(x)
         feats = [b(h) for b in self.branches]
         h = torch.cat(feats, dim=1)
         h = self.fuse(h)
-        return self.head(h)
+
+        h = self.pool(h)
+        h = h.view(h.size(0), -1)
+        emb = self.embed(h)
+
+        if return_embedding:
+            return emb
+        return self.classifier(emb)
+
 
 
 # ================= UTILS =================
