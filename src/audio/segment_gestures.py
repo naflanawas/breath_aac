@@ -30,7 +30,6 @@ import pandas as pd
 import librosa
 import soundfile as sf
 
-
 def run(in_root, out_root, manifest_csv, sr=16000):
     in_root = pathlib.Path(in_root)
     out_root = pathlib.Path(out_root)
@@ -46,9 +45,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
         subject_id = p.parent.name
         fname = p.name.lower()
 
-        # ----------------------------------
         # Semantic label from dataset naming
-        # ----------------------------------
         if "shallow" in fname:
             label = "short"
         elif "deep" in fname:
@@ -56,10 +53,8 @@ def run(in_root, out_root, manifest_csv, sr=16000):
         else:
             skipped += 1
             continue
-
-        # ----------------------------------
+        
         # Load audio
-        # ----------------------------------
         try:
             y, _ = librosa.load(p.as_posix(), sr=sr, mono=True)
         except Exception as e:
@@ -71,9 +66,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
             skipped += 1
             continue
 
-        # ----------------------------------
         # Save clip (no further segmentation)
-        # ----------------------------------
         out_path = out_root / subject_id / label / p.name
         out_path.parent.mkdir(parents=True, exist_ok=True)
         sf.write(out_path.as_posix(), y, sr)
@@ -86,9 +79,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
         ])
         kept += 1
 
-    # ----------------------------------
     # Save manifest
-    # ----------------------------------
     pd.DataFrame(
         rows,
         columns=["filepath", "label", "subject_id", "source_file"]

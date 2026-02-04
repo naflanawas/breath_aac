@@ -6,8 +6,8 @@ from pathlib import Path
 import argparse
 
 SR = 16000
-SHORT_SAMPLES = int(0.8 * SR)   # 800 ms
-LONG_SAMPLES  = int(2.5 * SR)   # 2500 ms
+SHORT_SAMPLES = int(0.8 * SR)   
+LONG_SAMPLES  = int(2.5 * SR)   
 
 def pad_or_crop(y, target_len):
     cur = len(y)
@@ -36,12 +36,10 @@ def standardize(in_path: Path, out_path: Path) -> bool:
         print(f"[SKIP-EMPTY] {in_path}")
         return False
 
-    # amplitude normalization
     m = np.max(np.abs(y))
     if m > 0:
         y = y / m
 
-    # decide target length from folder name
     label = in_path.parent.name.lower()
     if label == "short":
         y = pad_or_crop(y, SHORT_SAMPLES)

@@ -22,4 +22,4 @@ if __name__ == "__main__":
     feat = mel_delta_features(y, sr=sr)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     np.save(args.out, feat)
-    print("Saved:", args.out, "shape:", feat.shape)  # should print (3, 64, T)
+    print("Saved:", args.out, "shape:", feat.shape)  # format (3, 64, T)

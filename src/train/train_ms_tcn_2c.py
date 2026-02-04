@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
 
-# ---- reproducibility ----
+# reproducibility 
 SEED = 7
 os.environ["PYTHONHASHSEED"] = str(SEED)
 random.seed(SEED)
@@ -20,7 +20,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
-# ================= DATASET =================
+#  DATASET 
 class MelClipSet(Dataset):
     def __init__(self, split_csv, split, max_len=256, classes=None):
         df = pd.read_csv(split_csv)
@@ -40,12 +40,12 @@ class MelClipSet(Dataset):
         row = self.df.iloc[i]
         x = np.load(row["filepath"])  # [3, 64, T]
 
-        # ---- CMVN (per-clip normalization) ----
+        # CMVN (per-clip normalization) 
         mean = x.mean(axis=(1, 2), keepdims=True)
         std  = x.std(axis=(1, 2), keepdims=True) + 1e-8
         x = (x - mean) / std
 
-        # ---- Pad / Crop ----
+        # Pad / Crop 
         T = x.shape[-1]
         if T < self.max_len:
             pad = np.zeros((x.shape[0], x.shape[1], self.max_len - T), dtype=x.dtype)
@@ -53,7 +53,7 @@ class MelClipSet(Dataset):
         elif T > self.max_len:
             x = x[:, :, :self.max_len]
 
-        # ---- SpecAugment (TRAIN ONLY) ----
+        # SpecAugment (TRAIN ONLY) 
         if self.df.iloc[i]["split"] == "train":
             # frequency mask
             f = np.random.randint(0, 8)
@@ -69,7 +69,7 @@ class MelClipSet(Dataset):
         return torch.from_numpy(x), torch.tensor(y, dtype=torch.long)
 
 
-# ================= MODEL =================
+# MODEL
 class TCNBlock(nn.Module):
     def __init__(self, ch, k=3, dil=1):
         super().__init__()
@@ -124,7 +124,7 @@ class MSTCN(nn.Module):
 
 
 
-# ================= UTILS =================
+# UTILS 
 def pick_device():
     if torch.cuda.is_available():
         return "cuda"
@@ -152,9 +152,9 @@ def evaluate(model, loader, device):
     return accuracy_score(ys, ps), f1_score(ys, ps, average="macro")
 
 
-# ================= TRAIN =================
+# TRAIN
 def main(a):
-    # ---- metric logging ----
+    # metric logging
     train_losses = []
     val_accs = []
     val_f1s = []
