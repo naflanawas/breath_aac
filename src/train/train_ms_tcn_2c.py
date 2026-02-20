@@ -1,5 +1,6 @@
 import argparse
 import os, random
+from comet_ml import Experiment
 import numpy as np
 import pandas as pd
 import torch
@@ -7,7 +8,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
-from comet_ml import Experiment
 
 # reproducibility 
 SEED = 7
