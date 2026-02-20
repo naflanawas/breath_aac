@@ -36,7 +36,8 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=256, seed=7):
     qry_loader = DataLoader(qry_set, batch_size=32, shuffle=False)
 
     model = MSTCN(in_ch=3, n_classes=len(classes)).to(device)
-    model.load_state_dict(torch.load(ckpt, map_location=device))
+    state_dict = torch.load(ckpt, map_location=device)
+    model.load_state_dict(state_dict, strict=False)
     model.eval()
 
     # build class prototypes (mean embedding per class)
