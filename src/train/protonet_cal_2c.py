@@ -29,7 +29,7 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=256, seed=7):
     support = pd.concat(support_rows)
 
     sup_set = MelClipSet(split_csv, "train", max_len=max_len, classes=classes)
-    qry_set = MelClipSet(split_csv, "val",   max_len=max_len, classes=classes)
+    qry_set = MelClipSet(split_csv, "test",   max_len=max_len, classes=classes)
 
     sup_idx = sup_set.df.index[sup_set.df.filepath.isin(support.filepath)]
     sup_loader = DataLoader(torch.utils.data.Subset(sup_set, sup_idx), batch_size=32, shuffle=False)
