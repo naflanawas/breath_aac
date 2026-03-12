@@ -1,0 +1,35 @@
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Raw / external datasets
+/Coswara-Data-master/
+
+# Generated data (anchor to repo root so src/features stays tracked)
+/data_std/
+/data_segments/
+/features/
+/models/
+/outputs/
+/wandb/
+
+# Large file types (artifacts)
+*.pt
+*.npy
+*.wav
+*.zip
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Keep small metadata & figures
+!manifests/**/*.csv
+!viz/**/*.png

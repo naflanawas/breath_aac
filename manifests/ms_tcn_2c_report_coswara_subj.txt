@@ -1,0 +1,59 @@
+epoch 00 | val_acc 0.804 | val_f1 0.446
+epoch 01 | val_acc 0.631 | val_f1 0.478
+epoch 02 | val_acc 0.804 | val_f1 0.446
+epoch 03 | val_acc 0.804 | val_f1 0.446
+epoch 04 | val_acc 0.804 | val_f1 0.446
+epoch 05 | val_acc 0.687 | val_f1 0.503
+epoch 06 | val_acc 0.676 | val_f1 0.506
+epoch 07 | val_acc 0.704 | val_f1 0.513
+epoch 08 | val_acc 0.536 | val_f1 0.482
+epoch 09 | val_acc 0.682 | val_f1 0.510
+epoch 10 | val_acc 0.721 | val_f1 0.524
+epoch 11 | val_acc 0.799 | val_f1 0.534
+epoch 12 | val_acc 0.665 | val_f1 0.499
+epoch 13 | val_acc 0.670 | val_f1 0.502
+epoch 14 | val_acc 0.620 | val_f1 0.510
+epoch 15 | val_acc 0.782 | val_f1 0.539
+epoch 16 | val_acc 0.637 | val_f1 0.507
+epoch 17 | val_acc 0.743 | val_f1 0.539
+epoch 18 | val_acc 0.726 | val_f1 0.528
+epoch 19 | val_acc 0.670 | val_f1 0.521
+epoch 20 | val_acc 0.715 | val_f1 0.542
+epoch 21 | val_acc 0.682 | val_f1 0.537
+epoch 22 | val_acc 0.816 | val_f1 0.564
+epoch 23 | val_acc 0.777 | val_f1 0.589
+epoch 24 | val_acc 0.676 | val_f1 0.525
+epoch 25 | val_acc 0.771 | val_f1 0.584
+epoch 26 | val_acc 0.726 | val_f1 0.578
+epoch 27 | val_acc 0.704 | val_f1 0.610
+epoch 28 | val_acc 0.749 | val_f1 0.628
+epoch 29 | val_acc 0.737 | val_f1 0.637
+epoch 30 | val_acc 0.777 | val_f1 0.678
+epoch 31 | val_acc 0.777 | val_f1 0.672
+epoch 32 | val_acc 0.743 | val_f1 0.642
+epoch 33 | val_acc 0.782 | val_f1 0.671
+epoch 34 | val_acc 0.732 | val_f1 0.627
+epoch 35 | val_acc 0.810 | val_f1 0.704
+epoch 36 | val_acc 0.799 | val_f1 0.693
+epoch 37 | val_acc 0.788 | val_f1 0.543
+epoch 38 | val_acc 0.676 | val_f1 0.496
+epoch 39 | val_acc 0.654 | val_f1 0.518
+epoch 40 | val_acc 0.642 | val_f1 0.538
+epoch 41 | val_acc 0.804 | val_f1 0.663
+TEST acc 0.785 | TEST f1 0.656 | saved models/ms_tcn_2c_coswara_subj.pt
+SUBJECT-WISE TEST acc=0.785  f1=0.656
+
+Report:
+              precision    recall  f1-score   support
+
+        long      0.850     0.884     0.867       147
+       short      0.485     0.410     0.444        39
+
+    accuracy                          0.785       186
+   macro avg      0.667     0.647     0.656       186
+weighted avg      0.773     0.785     0.778       186
+
+Confusion:
+[[130  17]
+ [ 23  16]]
+
