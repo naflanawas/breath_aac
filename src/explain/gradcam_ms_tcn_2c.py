@@ -32,8 +32,7 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
 
     feats = {}
     def fwd_hook(module, inp, out):
-        feats["act"] = out.detach()   # detach activations
-        feats["act"].requires_grad = True
+        feats["act"] = out
     def bwd_hook(module, grad_in, grad_out):
         feats["grad"] = grad_out[0].detach()
 
