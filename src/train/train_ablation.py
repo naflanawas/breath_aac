@@ -69,8 +69,7 @@ class AblationDataset(Dataset):
 
         # ── Ablation: no_delta → keep only channel 0 (log-Mel), zero others
         if self.ablation == "no_delta":
-            x[1, :, :] = 0.0   # zero Δ
-            x[2, :, :] = 0.0   # zero ΔΔ
+            x = x[0:1, :, :]   # shape becomes [1, 64, T]
 
         # ── Ablation: no_cmvn → skip normalisation; otherwise apply CMVN
         if self.ablation != "no_cmvn":
@@ -189,7 +188,7 @@ def main(a):
 
     # For no_delta, model receives 3 channels but channels 1 & 2 are zeroed
     # so in_ch stays 3 (same architecture, different input content)
-    in_ch = 3
+    in_ch = 1 if a.ablation == "no_delta" else 3
 
     print(f"\n{'='*55}")
     print(f"ABLATION: {a.ablation.upper()}")
