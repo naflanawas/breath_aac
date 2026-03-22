@@ -156,7 +156,7 @@ def evaluate(model, loader, device):
 # TRAIN
 def main(a):
     experiment = Experiment(
-        api_key="Afgr4QNCGTlUT1zmEZvwWUcwz",
+        api_key=os.environ.get("COMET_API_KEY", ""),
         project_name="murmur-breath-aac",
         workspace="nafla-fathima"
     )

@@ -124,5 +124,6 @@ if __name__=="__main__":
     ap.add_argument("--shots", type=int, default=5)
     ap.add_argument("--max_len", type=int, default=256)
     a = ap.parse_args()
-    acc, f1 = few_shot_eval(a.split_csv, a.ckpt, shots=a.shots, max_len=a.max_len)
-    print(f"ProtoNet {a.shots}-shot  VAL acc={acc:.3f}  f1={f1:.3f}")
+    acc_g, f1_g, acc_p, f1_p = few_shot_eval(a.split_csv, a.ckpt, shots=a.shots, max_len=a.max_len)
+    print(f"Global   acc={acc_g:.3f}  f1={f1_g:.3f}")
+    print(f"ProtoNet {a.shots}-shot  acc={acc_p:.3f}  f1={f1_p:.3f}")
