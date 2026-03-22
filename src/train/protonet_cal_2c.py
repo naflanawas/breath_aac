@@ -5,6 +5,18 @@ from src.train.train_ms_tcn_2c import MSTCN, MelClipSet
 from src.utils.device import pick_device
 
 def embed_batch(model, X):
+    """Extract intermediate embeddings from MSTCN (before the classifier head).
+ 
+    Runs the stem → branches → fuse → pool pipeline and returns the flattened
+    feature vector.  Used by ProtoNet for prototype building and similarity scoring.
+ 
+    Args:
+        model: MSTCN instance.
+        X: Input tensor of shape (B, in_ch, n_mels, T).
+ 
+    Returns:
+        Tensor of shape (B, D) where D is the pool output dimension.
+    """
     h = model.stem(X)
     feats = [b(h) for b in model.branches]
     h = torch.cat(feats, dim=1)
@@ -39,6 +51,7 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
     all_true_proto,  all_pred_proto  = [], []
 
     def load_embed(path):
+        """Load a .npy feature file, apply CMVN + padding, and return its embedding."""
         x = np.load(path)                          # [3, 64, T]
         mean = x.mean(axis=(1,2), keepdims=True)
         std  = x.std(axis=(1,2), keepdims=True) + 1e-8

@@ -3,12 +3,18 @@ from pathlib import Path
 import argparse
 
 def relpath(p: Path, base: Path) -> str:
+    """Return path of p relative to base, falling back to the absolute path."""
     try:
         return str(p.resolve().relative_to(base.resolve()))
     except Exception:
         return str(p.resolve())
 
 def main():
+    """CLI entry point: scan standardised WAVs and write a manifest CSV.
+ 
+    Pairs each WAV with its corresponding Mel .npy file and writes rows with
+    columns: filepath, subject_id, label, split, std_wav, mel_npy.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--std_root", required=True, help="Folder containing standardized WAVs (e.g., data_std/dates)")
     ap.add_argument("--mel_root", required=True, help="Folder containing Mel npy files (e.g., features/mel)")

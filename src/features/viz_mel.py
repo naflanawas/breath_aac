@@ -3,6 +3,14 @@
 import argparse, glob, os, numpy as np, matplotlib.pyplot as plt
 
 def show_one(npy_path, sr=16000, hop=256, out_dir="viz"):
+    """Save a three-panel plot (log-Mel, Δ, ΔΔ) for one feature .npy file.
+ 
+    Args:
+        npy_path: Path to a (3, n_mels, T) .npy file.
+        sr: Sample rate used during feature extraction (for x-axis labels).
+        hop: Hop length in samples (for x-axis labels).
+        out_dir: Directory where PNG files are saved.
+    """
     x = np.load(npy_path)  # shape: (3, 64, T)
     os.makedirs(out_dir, exist_ok=True)
     sec_per_frame = hop / sr

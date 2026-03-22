@@ -22,6 +22,7 @@ val_s   = set(subjects[n_train:n_train + n_val])
 test_s  = set(subjects[n_train + n_val:])
 
 def assign_split(subject_id):
+    """Return the split name ('train', 'val', or 'test') for a subject."""
     if subject_id in train_s:
         return "train"
     if subject_id in val_s:

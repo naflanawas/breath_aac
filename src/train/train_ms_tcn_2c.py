@@ -24,7 +24,18 @@ torch.backends.cudnn.benchmark = False
 
 #  DATASET 
 class MelClipSet(Dataset):
+    """PyTorch Dataset for pre-extracted Mel+Δ/ΔΔ feature clips.
+ 
+    Applies CMVN normalisation and SpecAugment (frequency + time masking)
+    on training samples.
+    """
     def __init__(self, split_csv, split, max_len=256, classes=None):
+        """Args:
+            split_csv: Path to the manifest CSV with columns filepath/label/split.
+            split: Which partition to load ('train', 'val', or 'test').
+            max_len: Fixed temporal length in frames (pad or truncate).
+            classes: Ordered list of class names; inferred from train rows if None.
+        """
         df = pd.read_csv(split_csv)
         self.df = df[df["split"] == split].reset_index(drop=True)
 
@@ -36,9 +47,11 @@ class MelClipSet(Dataset):
         self.max_len = max_len
 
     def __len__(self):
+        """Return the number of clips in this split."""
         return len(self.df)
 
     def __getitem__(self, i):
+        """Return (feature_tensor, label_index) for clip i."""
         row = self.df.iloc[i]
         x = np.load(row["filepath"])  # [3, 64, T]
 
@@ -73,7 +86,16 @@ class MelClipSet(Dataset):
 
 # MODEL
 class TCNBlock(nn.Module):
+    """Residual dilated temporal convolution block.
+    Applies two 1×k Conv2d layers (dilation along the time axis) and adds
+    the input as a residual skip connection.
+    """
     def __init__(self, ch, k=3, dil=1):
+        """Args:
+            ch: Number of input/output channels.
+            k: Temporal kernel size.
+            dil: Temporal dilation factor.
+        """
         super().__init__()
         pad = ((k - 1) // 2) * dil
         self.net = nn.Sequential(
@@ -84,11 +106,28 @@ class TCNBlock(nn.Module):
         )
 
     def forward(self, x):
+        """Apply residual TCN block: output = x + conv(x)."""
         return x + self.net(x)
 
 
 class MSTCN(nn.Module):
+    """Multi-Scale Temporal Convolutional Network for breath gesture classification.
+ 
+    Architecture:
+        1. Stem — two Conv2d layers for local 2-D feature extraction.
+        2. Branches — one TCNBlock pair per dilation value, run in parallel.
+        3. Fuse — 1×1 Conv2d to merge all branch outputs.
+        4. Pool — AdaptiveAvgPool2d to (1,1).
+        5. Embed — linear projection.
+        6. Classifier — linear head (omitted when return_embedding=True).
+    """
     def __init__(self, in_ch=3, base=64, n_classes=2, dilations=(1, 2, 4, 8)):
+        """Args:
+            in_ch: Number of input channels (3 for log-Mel+Δ+ΔΔ).
+            base: Base channel width.
+            n_classes: Number of output classes.
+            dilations: Tuple of temporal dilation factors for the parallel branches.
+        """
         super().__init__()
         self.stem = nn.Sequential(
             nn.Conv2d(in_ch, base, (5, 5), padding=(2, 2)),
@@ -111,6 +150,16 @@ class MSTCN(nn.Module):
 
 
     def forward(self, x, return_embedding=False):
+        """Forward pass.
+ 
+        Args:
+            x: Input tensor of shape (B, in_ch, n_mels, T).
+            return_embedding: If True return the embed layer output instead
+                of classifier logits (used by ProtoNet).
+ 
+        Returns:
+            Logits tensor (B, n_classes) or embedding tensor (B, base).
+        """
         h = self.stem(x)
         feats = [b(h) for b in self.branches]
         h = torch.cat(feats, dim=1)
@@ -125,6 +174,16 @@ class MSTCN(nn.Module):
         return self.classifier(emb)
 
 def class_weights(split_csv, classes):
+    """Compute inverse-frequency class weights for weighted CrossEntropyLoss.
+ 
+    Args:
+        split_csv: Manifest CSV with label/split columns.
+        classes: Ordered list of class names.
+ 
+    Returns:
+        Float32 tensor of shape (len(classes),) normalised so weights sum to
+        len(classes).
+    """
     df = pd.read_csv(split_csv)
     tr = df[df.split == "train"].label.value_counts().to_dict()
     counts = torch.tensor([tr.get(c, 1) for c in classes], dtype=torch.float32)
@@ -133,6 +192,7 @@ def class_weights(split_csv, classes):
 
 
 def evaluate(model, loader, device):
+    """Evaluate model on a DataLoader; return (accuracy, macro-F1)."""
     model.eval()
     ys, ps = [], []
     with torch.no_grad():
@@ -147,6 +207,12 @@ def evaluate(model, loader, device):
 
 # TRAIN
 def main(a):
+    """Train the MS-TCN model and log metrics to Comet ML.
+ 
+    Args:
+        a: Parsed argparse namespace with fields:
+           split_csv, epochs, bs, max_len, lr, patience, ckpt.
+    """
     experiment = Experiment(
         api_key=os.environ.get("COMET_API_KEY", ""),
         project_name="murmur-breath-aac",

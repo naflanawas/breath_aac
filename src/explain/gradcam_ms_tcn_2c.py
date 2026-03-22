@@ -6,12 +6,28 @@ from src.utils.device import pick_device
 from src.features.mel_delta import mel_delta_features as mel_delta_stack
 
 def fix_len(x, T=1024):
+    """Pad (zeros, right) or truncate the time axis of a feature array to exactly T frames."""
     if x.shape[-1] < T:
         pad = np.zeros((x.shape[0], x.shape[1], T - x.shape[-1]), dtype=x.dtype)
         return np.concatenate([x, pad], axis=-1)
     return x[:, :, :T]
 
 def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
+    """Run Grad-CAM on a WAV file using the MS-TCN classifier.
+ 
+    Overlays the class-activation heatmap on the log-Mel spectrogram and
+    saves the result as a PNG.
+ 
+    Args:
+        wav: Path to input WAV file.
+        ckpt: Path to the trained MS-TCN checkpoint (.pt).
+        split_csv: Split CSV used during training (for class order).
+        out_png: Output path for the Grad-CAM visualisation.
+        target_class: Class name to explain; uses predicted class if None.
+ 
+    Returns:
+        Tuple (predicted_class, confidence).
+    """
     device = pick_device()
     classes = sorted(pd.read_csv(split_csv).query("split=='train'")["label"].unique())
 
@@ -21,8 +37,10 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
 
     feats = {}
     def fwd_hook(module, inp, out):
+        """Cache forward activations from the fuse layer."""
         feats["act"] = out
     def bwd_hook(module, grad_in, grad_out):
+        """Cache gradients flowing back through the fuse layer."""
         feats["grad"] = grad_out[0].detach()
 
     h1 = model.fuse.register_forward_hook(fwd_hook)

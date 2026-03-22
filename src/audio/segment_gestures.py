@@ -31,6 +31,19 @@ import librosa
 import soundfile as sf
 
 def run(in_root, out_root, manifest_csv, sr=16000):
+    """Segment Coswara breathing recordings into short/long gesture clips.
+ 
+    Assigns class labels from the dataset filename convention:
+    ``breathing-shallow.wav`` → ``short``, ``breathing-deep.wav`` → ``long``.
+    Clips are written to ``<out_root>/<subject_id>/<label>/`` and a manifest
+    CSV is saved at ``manifest_csv``.
+ 
+    Args:
+        in_root: Path to the Coswara-Data-master root directory.
+        out_root: Destination directory for segmented clips.
+        manifest_csv: Output path for the segments manifest CSV.
+        sr: Target sample rate in Hz.
+    """
     in_root = pathlib.Path(in_root)
     out_root = pathlib.Path(out_root)
     rows = []

@@ -256,6 +256,7 @@ def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
+    """CLI entry point: run repeated few-shot ProtoNet evaluation and print a summary table."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--split_csv", default="manifests/split_2c_subjectwise.csv")
     ap.add_argument("--ckpt",      default="models/ms_tcn_colab_1024.pt")
