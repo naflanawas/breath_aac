@@ -32,6 +32,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
+from src.train.train_ms_tcn_2c import TCNBlock, MSTCN
+from src.utils.device import pick_device
 
 # ── Reproducibility ──────────────────────────────────────────────────────────
 SEED = 7
@@ -99,63 +101,6 @@ class AblationDataset(Dataset):
 
         y = self.c2i[row["label"]]
         return torch.from_numpy(x), torch.tensor(y, dtype=torch.long)
-
-
-# ── Model ─────────────────────────────────────────────────────────────────────
-
-class TCNBlock(nn.Module):
-    def __init__(self, ch, k=3, dil=1):
-        super().__init__()
-        pad = ((k - 1) // 2) * dil
-        self.net = nn.Sequential(
-            nn.Conv2d(ch, ch, (1, k), padding=(0, pad), dilation=(1, dil)),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(ch, ch, (1, k), padding=(0, pad), dilation=(1, dil)),
-            nn.ReLU(inplace=True),
-        )
-    def forward(self, x):
-        return x + self.net(x)
-
-
-class AblationMSTCN(nn.Module):
-    def __init__(self, in_ch=3, base=64, n_classes=2,
-                 dilations=(1, 2, 4, 8)):
-        super().__init__()
-        self.stem = nn.Sequential(
-            nn.Conv2d(in_ch, base, (5, 5), padding=(2, 2)),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(base, base, (3, 3), padding=(1, 1)),
-            nn.ReLU(inplace=True),
-        )
-        self.branches = nn.ModuleList([
-            nn.Sequential(TCNBlock(base, k=3, dil=d),
-                          TCNBlock(base, k=3, dil=d))
-            for d in dilations
-        ])
-        n_branches = len(dilations)
-        self.fuse       = nn.Conv2d(base * n_branches, base, 1)
-        self.pool       = nn.AdaptiveAvgPool2d((1, 1))
-        self.embed      = nn.Linear(base, base)
-        self.classifier = nn.Linear(base, n_classes)
-
-    def forward(self, x):
-        h     = self.stem(x)
-        feats = [b(h) for b in self.branches]
-        h     = torch.cat(feats, dim=1)
-        h     = self.fuse(h)
-        h     = self.pool(h)
-        h     = h.view(h.size(0), -1)
-        emb   = self.embed(h)
-        return self.classifier(emb)
-
-
-# ── Utilities ─────────────────────────────────────────────────────────────────
-
-def pick_device():
-    if torch.cuda.is_available():  return "cuda"
-    if torch.backends.mps.is_available(): return "mps"
-    return "cpu"
-
 
 def class_weights(split_csv, classes):
     df = pd.read_csv(split_csv)

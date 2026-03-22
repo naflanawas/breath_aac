@@ -2,25 +2,14 @@ import argparse, numpy as np, torch, librosa, matplotlib.pyplot as plt
 from pathlib import Path
 from src.train.train_ms_tcn_2c import MSTCN
 import pandas as pd
-
-def mel_delta_stack(y, sr=16000, n_mels=64, n_fft=1024, hop=256, fmin=50, fmax=8000):
-    S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels, n_fft=n_fft,
-                                       hop_length=hop, fmin=fmin, fmax=fmax)
-    S_db = librosa.power_to_db(S, ref=np.max).astype(np.float32)
-    d1 = librosa.feature.delta(S_db, width=9).astype(np.float32)
-    d2 = librosa.feature.delta(S_db, order=2, width=9).astype(np.float32)
-    return np.stack([S_db, d1, d2], axis=0)  # [3,64,T]
+from src.utils.device import pick_device
+from src.features.mel_delta import mel_delta_features as mel_delta_stack
 
 def fix_len(x, T=1024):
     if x.shape[-1] < T:
         pad = np.zeros((x.shape[0], x.shape[1], T - x.shape[-1]), dtype=x.dtype)
         return np.concatenate([x, pad], axis=-1)
     return x[:, :, :T]
-
-def pick_device():
-    if torch.backends.mps.is_available(): return "mps"
-    if torch.cuda.is_available(): return "cuda"
-    return "cpu"
 
 def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     device = pick_device()

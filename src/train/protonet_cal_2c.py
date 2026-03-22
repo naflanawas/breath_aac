@@ -2,6 +2,7 @@ import argparse, numpy as np, pandas as pd, torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score
 from src.train.train_ms_tcn_2c import MSTCN, MelClipSet
+from src.utils.device import pick_device
 
 def embed_batch(model, X):
     h = model.stem(X)
@@ -23,9 +24,7 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
     df = pd.read_csv(split_csv)
     classes = sorted(df[df.split == "train"]["label"].unique())
     c2i = {c: i for i, c in enumerate(classes)}
-
-    device = ("mps" if torch.backends.mps.is_available()
-              else "cuda" if torch.cuda.is_available() else "cpu")
+    device = pick_device()
 
     model = MSTCN(in_ch=3, n_classes=len(classes)).to(device)
     model.load_state_dict(torch.load(ckpt, map_location=device), strict=False)

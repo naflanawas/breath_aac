@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
+from src.utils.device import pick_device
 
 # reproducibility 
 SEED = 7
@@ -122,15 +123,6 @@ class MSTCN(nn.Module):
         if return_embedding:
             return emb
         return self.classifier(emb)
-
-
-
-# UTILS 
-def pick_device():
-    if torch.cuda.is_available():
-        return "cuda"
-    return "cpu"
-
 
 def class_weights(split_csv, classes):
     df = pd.read_csv(split_csv)
