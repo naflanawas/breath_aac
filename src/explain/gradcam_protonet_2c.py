@@ -7,7 +7,7 @@ from src.train.protonet_cal_2c import embed_batch
 from src.utils.device import pick_device
 from src.features.mel_delta import mel_delta_features as mel_delta_stack
 
-def fix_len(x, T=256):
+def fix_len(x, T=1024):
     """Pad (zeros, right) or truncate the time axis of a feature array to exactly T frames."""
     if x.shape[-1] < T:
         pad = np.zeros((x.shape[0], x.shape[1], T-x.shape[-1]), dtype=x.dtype)

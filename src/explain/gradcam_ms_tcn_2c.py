@@ -49,7 +49,10 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     y, sr = librosa.load(wav, sr=16000, mono=True)
     m = np.max(np.abs(y));  y = y/(m+1e-9) if m>0 else y
     X = fix_len(mel_delta_stack(y, sr=sr), 1024)
-    X_t = torch.from_numpy(X).unsqueeze(0).to(device)  # [1,3,64,256]
+    mean = X.mean(axis=(1, 2), keepdims=True)
+    std  = X.std(axis=(1, 2),  keepdims=True) + 1e-8
+    X    = (X - mean) / std
+    X_t = torch.from_numpy(X).unsqueeze(0).to(device)  # [1,3,64,1024]
 
     logits = model(X_t)
     probs = torch.softmax(logits, dim=1)[0]
