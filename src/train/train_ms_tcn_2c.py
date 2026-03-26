@@ -29,7 +29,7 @@ class MelClipSet(Dataset):
     Applies CMVN normalisation and SpecAugment (frequency + time masking)
     on training samples.
     """
-    def __init__(self, split_csv, split, max_len=256, classes=None):
+    def __init__(self, split_csv, split, max_len=1024, classes=None):
         """Args:
             split_csv: Path to the manifest CSV with columns filepath/label/split.
             split: Which partition to load ('train', 'val', or 'test').

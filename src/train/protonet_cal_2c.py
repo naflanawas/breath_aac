@@ -23,7 +23,8 @@ def embed_batch(model, X):
     h = model.fuse(h)
     h = model.pool(h)
     h = h.view(h.size(0), -1)
-    return h               # [B, D]
+    h = model.embed(h)
+    return h            
 
 def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
     """
@@ -134,7 +135,7 @@ if __name__=="__main__":
     ap.add_argument("--split_csv", default="manifests/split_2c.csv")
     ap.add_argument("--ckpt", default="models/ms_tcn_2c.pt")
     ap.add_argument("--shots", type=int, default=5)
-    ap.add_argument("--max_len", type=int, default=256)
+    ap.add_argument("--max_len", type=int, default=1024)
     a = ap.parse_args()
     acc_g, f1_g, acc_p, f1_p = few_shot_eval(a.split_csv, a.ckpt, shots=a.shots, max_len=a.max_len)
     print(f"Global   acc={acc_g:.3f}  f1={f1_g:.3f}")

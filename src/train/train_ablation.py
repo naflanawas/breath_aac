@@ -168,13 +168,10 @@ def main(a):
     va = DataLoader(valset,   batch_size=a.bs, num_workers=2)
     te = DataLoader(testset,  batch_size=a.bs, num_workers=2)
 
-    model = AblationMSTCN(in_ch=in_ch, n_classes=len(classes),
-                          dilations=dilations).to(device)
-    crit  = nn.CrossEntropyLoss(
-        weight=class_weights(a.split_csv, classes).to(device))
+    model = MSTCN(in_ch=in_ch, n_classes=len(classes), dilations=dilations).to(device)
+    crit  = nn.CrossEntropyLoss(weight=class_weights(a.split_csv, classes).to(device))
     opt   = optim.Adam(model.parameters(), lr=a.lr)
-    sched = optim.lr_scheduler.ReduceLROnPlateau(
-        opt, mode="max", factor=0.5, patience=2, min_lr=1e-6)
+    sched = optim.lr_scheduler.ReduceLROnPlateau( opt, mode="max", factor=0.5, patience=2, min_lr=1e-6)
 
     best_f1, bad = -1, 0
     ckpt = f"models/ablation_{a.ablation}.pt"
