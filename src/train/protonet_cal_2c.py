@@ -23,7 +23,6 @@ def embed_batch(model, X):
     h = model.fuse(h)
     h = model.pool(h)
     h = h.view(h.size(0), -1)
-    h = model.embed(h)
     return h            
 
 def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
