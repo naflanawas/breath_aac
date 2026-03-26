@@ -73,8 +73,10 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     cam_np = cam.detach().cpu().numpy()  # <-- detach before numpy
 
     logmel = X[0]
-    sec_per_frame = 1024/16000
-    extent = [0, logmel.shape[1]*sec_per_frame, 0, logmel.shape[0]]
+    y_orig, sr_orig = librosa.load(wav, sr=16000, mono=True)
+    actual_dur = len(y_orig) / sr_orig         
+    sec_per_frame = actual_dur / logmel.shape[1]
+    extent = [0, actual_dur, 0, logmel.shape[0]]
 
     plt.figure(figsize=(7,4))
     plt.imshow(logmel, origin="lower", aspect="auto", extent=extent)
