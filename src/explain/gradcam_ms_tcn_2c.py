@@ -32,7 +32,10 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     classes = sorted(pd.read_csv(split_csv).query("split=='train'")["label"].unique())
 
     model = MSTCN(in_ch=3, n_classes=len(classes)).to(device)
-    model.load_state_dict(torch.load(ckpt, map_location=device))
+    ckpt_data = torch.load(ckpt, map_location=device)
+    ckpt_data['classifier.weight'] = ckpt_data.pop('head.2.weight')
+    ckpt_data['classifier.bias']   = ckpt_data.pop('head.2.bias')
+    model.load_state_dict(ckpt_data, strict=False)
     model.eval()
 
     feats = {}
