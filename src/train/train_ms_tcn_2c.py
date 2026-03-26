@@ -145,7 +145,6 @@ class MSTCN(nn.Module):
 
         self.fuse = nn.Conv2d(base * len(dilations), base, 1)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.embed = nn.Linear(base, base)
         self.classifier = nn.Linear(base, n_classes)
 
 
@@ -164,14 +163,13 @@ class MSTCN(nn.Module):
         feats = [b(h) for b in self.branches]
         h = torch.cat(feats, dim=1)
         h = self.fuse(h)
-
         h = self.pool(h)
-        h = h.view(h.size(0), -1)
-        emb = self.embed(h)
+        h = h.view(h.size(0), -1)   # [B, 64]
 
         if return_embedding:
-            return emb
-        return self.classifier(emb)
+            return h              
+
+        return self.classifier(h) 
 
 def class_weights(split_csv, classes):
     """Compute inverse-frequency class weights for weighted CrossEntropyLoss.
