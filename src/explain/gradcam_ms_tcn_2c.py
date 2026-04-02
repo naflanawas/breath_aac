@@ -86,7 +86,7 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     Path(out_png).parent.mkdir(parents=True, exist_ok=True)
     plt.tight_layout(); plt.savefig(out_png, dpi=160); plt.close()
     h1.remove(); h2.remove()
-    return classes[pred_i], float(probs[pred_i])
+    return classes[pred_i], float(probs[pred_i].detach())
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()

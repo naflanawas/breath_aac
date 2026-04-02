@@ -55,12 +55,7 @@ class MelClipSet(Dataset):
         row = self.df.iloc[i]
         x = np.load(row["filepath"])  # [3, 64, T]
 
-        # CMVN (per-clip normalization) 
-        mean = x.mean(axis=(1, 2), keepdims=True)
-        std  = x.std(axis=(1, 2), keepdims=True) + 1e-8
-        x = (x - mean) / std
-
-        # Pad / Crop 
+        # Pad / Crop
         T = x.shape[-1]
         if T < self.max_len:
             pad = np.zeros((x.shape[0], x.shape[1], self.max_len - T), dtype=x.dtype)
@@ -145,6 +140,7 @@ class MSTCN(nn.Module):
 
         self.fuse = nn.Conv2d(base * len(dilations), base, 1)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.embed = nn.Linear(base, base)
         self.classifier = nn.Linear(base, n_classes)
 
 
@@ -165,11 +161,12 @@ class MSTCN(nn.Module):
         h = self.fuse(h)
         h = self.pool(h)
         h = h.view(h.size(0), -1)   # [B, 64]
+        h = self.embed(h)
 
         if return_embedding:
-            return h              
+            return h
 
-        return self.classifier(h) 
+        return self.classifier(h)
 
 def class_weights(split_csv, classes):
     """Compute inverse-frequency class weights for weighted CrossEntropyLoss.
