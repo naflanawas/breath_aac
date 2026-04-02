@@ -1,6 +1,5 @@
 import argparse
 import os, random
-from comet_ml import Experiment
 import numpy as np
 import pandas as pd
 import torch
@@ -202,36 +201,12 @@ def evaluate(model, loader, device):
 
 # TRAIN
 def main(a):
-    """Train the MS-TCN model and log metrics to Comet ML.
- 
+    """Train the MS-TCN model.
+
     Args:
         a: Parsed argparse namespace with fields:
            split_csv, epochs, bs, max_len, lr, patience, ckpt.
     """
-    experiment = Experiment(
-        api_key=os.environ.get("COMET_API_KEY", ""),
-        project_name="murmur-breath-aac",
-        workspace="nafla-fathima"
-    )
-
-    experiment.set_name("ms_tcn_global_subjectwise")
-    experiment.add_tag("global_model")
-    experiment.add_tag("subjectwise_split")
-
-    # Log hyperparameters
-    hyper_params = {
-        "epochs": a.epochs,
-        "batch_size": a.bs,
-        "max_len": a.max_len,
-        "learning_rate": a.lr,
-        "patience": a.patience,
-        "split_csv": a.split_csv,
-        "model": "MS-TCN",
-        "task": "2-class breath (short vs long)"
-    }
-
-    experiment.log_parameters(hyper_params)
-
     # metric logging
     train_losses = []
     val_accs = []
@@ -287,10 +262,6 @@ def main(a):
             f"val_f1 {va_f1:.3f}"
         )
 
-        experiment.log_metric("train_loss", avg_train_loss, step=ep)
-        experiment.log_metric("val_accuracy", va_acc, step=ep)
-        experiment.log_metric("val_f1", va_f1, step=ep)
-
         if va_f1 > best_f1:
             best_f1 = va_f1
             bad = 0
@@ -309,10 +280,6 @@ def main(a):
     model.load_state_dict(torch.load(a.ckpt))
     te_acc, te_f1 = evaluate(model, te, device)
     print(f"TEST acc {te_acc:.3f} | TEST f1 {te_f1:.3f}")
-
-    experiment.log_metric("test_accuracy", te_acc)
-    experiment.log_metric("test_f1", te_f1)
-    experiment.end()
 
 
 if __name__ == "__main__":
