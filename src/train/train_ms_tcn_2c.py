@@ -160,11 +160,11 @@ class MSTCN(nn.Module):
         h = self.fuse(h)
         h = self.pool(h)
         h = h.view(h.size(0), -1)   # [B, 64]
-        h = self.embed(h)
 
         if return_embedding:
             return h
 
+        h = self.embed(h)
         return self.classifier(h)
 
 def class_weights(split_csv, classes):
