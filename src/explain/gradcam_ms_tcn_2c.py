@@ -33,8 +33,6 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
 
     model = MSTCN(in_ch=3, n_classes=len(classes)).to(device)
     ckpt_data = torch.load(ckpt, map_location=device)
-    ckpt_data['classifier.weight'] = ckpt_data.pop('head.2.weight')
-    ckpt_data['classifier.bias']   = ckpt_data.pop('head.2.bias')
     model.load_state_dict(ckpt_data, strict=False)
     model.eval()
 
@@ -52,9 +50,6 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     y, sr = librosa.load(wav, sr=16000, mono=True)
     m = np.max(np.abs(y));  y = y/(m+1e-9) if m>0 else y
     X = fix_len(mel_delta_stack(y, sr=sr), 1024)
-    mean = X.mean(axis=(1, 2), keepdims=True)
-    std  = X.std(axis=(1, 2),  keepdims=True) + 1e-8
-    X    = (X - mean) / std
     X_t = torch.from_numpy(X).unsqueeze(0).to(device)  # [1,3,64,1024]
 
     logits = model(X_t)
