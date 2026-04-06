@@ -73,13 +73,18 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     sec_per_frame = actual_dur / logmel.shape[1]
     extent = [0, actual_dur, 0, logmel.shape[0]]
 
-    plt.figure(figsize=(7,4))
-    plt.imshow(logmel, origin="lower", aspect="auto", extent=extent)
-    plt.imshow(cam_np, origin="lower", aspect="auto", extent=extent, alpha=0.35)
-    plt.title(f"{Path(wav).name}  | pred={classes[pred_i]} ({probs[pred_i]:.2f})")
-    plt.xlabel("Time (s)"); plt.ylabel("Mel bins")
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.imshow(logmel, origin="lower", aspect="auto", extent=extent, cmap="magma")
+    overlay = ax.imshow(cam_np, origin="lower", aspect="auto", extent=extent,
+                        cmap="hot", alpha=0.45, vmin=0, vmax=1)
+    plt.colorbar(overlay, ax=ax, label="Grad-CAM activation")
+    ax.set_title(f"{Path(wav).name}  |  pred={classes[pred_i]} ({probs[pred_i]:.2f})")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Mel bins")
     Path(out_png).parent.mkdir(parents=True, exist_ok=True)
-    plt.tight_layout(); plt.savefig(out_png, dpi=160); plt.close()
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=160)
+    plt.close()
     h1.remove(); h2.remove()
     return classes[pred_i], float(probs[pred_i].detach())
 
