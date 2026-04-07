@@ -61,6 +61,41 @@ def main():
             m = np.max(np.abs(y))
             if m > 0:
                 y = y / (m + 1e-9)
+
+            # STE-based VAD — same parameters as BreathDetector
+            frame_length = 512
+            hop = 256
+            energy = np.array([
+                np.sum(y[i:i + frame_length] ** 2)
+                for i in range(0, len(y) - frame_length, hop)
+            ])
+
+            if energy.max() > 0.005:
+                energy_norm = energy / energy.max()
+                active = energy_norm > 0.02
+                # Find longest active segment
+                best_start, best_end, cur_start = 0, 0, 0
+                in_seg = False
+                for i, a in enumerate(active):
+                    if a and not in_seg:
+                        cur_start = i * hop
+                        in_seg = True
+                    elif not a and in_seg:
+                        cur_end = i * hop
+                        if (cur_end - cur_start) > (best_end - best_start):
+                            best_start, best_end = cur_start, cur_end
+                        in_seg = False
+                if in_seg:
+                    cur_end = len(y)
+                    if (cur_end - cur_start) > (best_end - best_start):
+                        best_start, best_end = cur_start, cur_end
+
+                if best_end > best_start:
+                    # Add 50ms padding
+                    best_start = max(0, best_start - 800)
+                    best_end = min(len(y), best_end + 800)
+                    y = y[best_start:best_end]
+
             feat = mel_delta_features(y, sr=args.sr, n_fft=args.n_fft, hop=args.hop,
                                       n_mels=args.n_mels, fmin=args.fmin, fmax=args.fmax)
             out_path.parent.mkdir(parents=True, exist_ok=True)

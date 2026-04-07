@@ -28,7 +28,7 @@ class MelClipSet(Dataset):
     Applies CMVN normalisation and SpecAugment (frequency + time masking)
     on training samples.
     """
-    def __init__(self, split_csv, split, max_len=1024, classes=None):
+    def __init__(self, split_csv, split, max_len=256, classes=None):
         """Args:
             split_csv: Path to the manifest CSV with columns filepath/label/split.
             split: Which partition to load ('train', 'val', or 'test').
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     ap.add_argument("--split_csv", required=True)
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--bs", type=int, default=8)
-    ap.add_argument("--max_len", type=int, default=1024)
+    ap.add_argument("--max_len", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--patience", type=int, default=6)
     ap.add_argument("--ckpt", default="models/ms_tcn_cmvn_aug.pt")
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     if '__file__' not in globals(): # Heuristic for notebook environment
         args = ap.parse_args([
             "--split_csv", "manifests/split_2c_subjectwise.csv",
-            "--max_len", "1024",
+            "--max_len", "256",
             "--bs", "8",
             "--ckpt", "models/ms_tcn_cmvn_aug.pt" # Default checkpoint name for this updated script
         ])
