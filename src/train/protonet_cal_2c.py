@@ -51,11 +51,8 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
     all_true_proto,  all_pred_proto  = [], []
 
     def load_embed(path):
-        """Load a .npy feature file, apply CMVN + padding, and return its embedding."""
+        """Load a .npy feature file, apply padding, and return its embedding."""
         x = np.load(path)                          # [3, 64, T]
-        mean = x.mean(axis=(1,2), keepdims=True)
-        std  = x.std(axis=(1,2), keepdims=True) + 1e-8
-        x = (x - mean) / std
         T = x.shape[-1]
         if T < max_len:
             pad = np.zeros((3, 64, max_len - T), dtype=x.dtype)

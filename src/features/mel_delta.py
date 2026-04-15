@@ -1,4 +1,6 @@
-import numpy as np, librosa, argparse
+import argparse
+import librosa
+import numpy as np
 from pathlib import Path
 
 def mel_delta_features(y, sr=16000, n_fft=1024, hop=256, n_mels=64, fmin=50, fmax=8000):

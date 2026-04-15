@@ -27,18 +27,7 @@ def pad_or_crop(y, target_len):
     return np.pad(y, (left, right), mode="constant")
 
 def standardize(in_path: Path, out_path: Path) -> bool:
-    """Load, peak-normalise, and length-standardise one audio clip.
- 
-    The target length is determined by the parent folder name:
-    ``short`` → 0.8 s, ``long`` → 2.5 s at 16 kHz.
- 
-    Args:
-        in_path: Source WAV file.
-        out_path: Destination WAV file (PCM-16).
- 
-    Returns:
-        True on success, False if the file was skipped or errored.
-    """
+    """Load, peak-normalise, and length-standardise one audio clip."""
     try:
         y, _ = librosa.load(str(in_path), sr=SR, mono=True)
     except Exception as e:

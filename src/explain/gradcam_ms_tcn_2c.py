@@ -48,7 +48,8 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     h2 = model.fuse.register_full_backward_hook(bwd_hook)
 
     y, sr = librosa.load(wav, sr=16000, mono=True)
-    m = np.max(np.abs(y));  y = y/(m+1e-9) if m>0 else y
+    m = np.max(np.abs(y))
+    y = y / (m + 1e-9) if m > 0 else y
     X = fix_len(mel_delta_stack(y, sr=sr), 1024)
     X_t = torch.from_numpy(X).unsqueeze(0).to(device)  # [1,3,64,1024]
 
@@ -65,7 +66,7 @@ def gradcam_on_wav(wav, ckpt, split_csv, out_png, target_class=None):
     w   = dA.mean(dim=(1,2))           # [C]
     cam = torch.relu((w[:,None,None] * A).sum(dim=0))  # [64,256]
     cam = cam / (cam.max() + 1e-9)
-    cam_np = cam.detach().cpu().numpy()  # <-- detach before numpy
+    cam_np = cam.detach().cpu().numpy()
 
     logmel = X[0]
     y_orig, sr_orig = librosa.load(wav, sr=16000, mono=True)

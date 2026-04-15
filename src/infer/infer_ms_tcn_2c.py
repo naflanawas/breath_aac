@@ -40,11 +40,6 @@ def run_inference(wav_path: str, ckpt_path: str,
     # Extract features matching training pipeline exactly
     raw = mel_delta_features(y, sr=sr)  # [3, 64, T]
 
-    # Apply CMVN — must match training
-    mean = raw.mean(axis=(1, 2), keepdims=True)
-    std  = raw.std(axis=(1, 2),  keepdims=True) + 1e-8
-    raw  = (raw - mean) / std
-
     # Pad or crop to max_len
     T = raw.shape[-1]
     if T < max_len:

@@ -23,11 +23,7 @@ torch.backends.cudnn.benchmark = False
 
 #  DATASET 
 class MelClipSet(Dataset):
-    """PyTorch Dataset for pre-extracted Mel+Δ/ΔΔ feature clips.
- 
-    Applies CMVN normalisation and SpecAugment (frequency + time masking)
-    on training samples.
-    """
+    """PyTorch Dataset for pre-extracted Mel+Δ/ΔΔ feature clips."""
     def __init__(self, split_csv, split, max_len=1024, classes=None):
         """Args:
             split_csv: Path to the manifest CSV with columns filepath/label/split.
@@ -103,7 +99,6 @@ class TCNBlock(nn.Module):
         """Apply residual TCN block: output = x + conv(x)."""
         return x + self.net(x)
 
-
 class MSTCN(nn.Module):
     """Multi-Scale Temporal Convolutional Network for breath gesture classification.
  
@@ -144,16 +139,7 @@ class MSTCN(nn.Module):
 
 
     def forward(self, x, return_embedding=False):
-        """Forward pass.
- 
-        Args:
-            x: Input tensor of shape (B, in_ch, n_mels, T).
-            return_embedding: If True return the embed layer output instead
-                of classifier logits (used by ProtoNet).
- 
-        Returns:
-            Logits tensor (B, n_classes) or embedding tensor (B, base).
-        """
+        """Forward pass."""
         h = self.stem(x)
         feats = [b(h) for b in self.branches]
         h = torch.cat(feats, dim=1)
@@ -201,12 +187,7 @@ def evaluate(model, loader, device):
 
 # TRAIN
 def main(a):
-    """Train the MS-TCN model.
-
-    Args:
-        a: Parsed argparse namespace with fields:
-           split_csv, epochs, bs, max_len, lr, patience, ckpt.
-    """
+    """Train the MS-TCN model."""
     # metric logging
     train_losses = []
     val_accs = []
@@ -290,7 +271,7 @@ if __name__ == "__main__":
     ap.add_argument("--max_len", type=int, default=1024)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--patience", type=int, default=6)
-    ap.add_argument("--ckpt", default="models/ms_tcn_cmvn_aug.pt")
+    ap.add_argument("--ckpt", default="models/ms_tcn_no_cmvn.pt")
 
     # Check if running in an interactive notebook environment (e.g., Colab)
     # In such an environment, sys.argv might not contain expected command-line arguments.
@@ -300,7 +281,7 @@ if __name__ == "__main__":
             "--split_csv", "manifests/split_2c_subjectwise.csv",
             "--max_len", "1024",
             "--bs", "8",
-            "--ckpt", "models/ms_tcn_cmvn_aug.pt" # Default checkpoint name for this updated script
+            "--ckpt", "models/ms_tcn_no_cmvn.pt"
         ])
     else:
         args = ap.parse_args() # For command-line execution, use sys.argv
