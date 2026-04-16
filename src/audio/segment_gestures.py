@@ -1,29 +1,3 @@
-#!/usr/bin/env python3
-"""
-Final segmentation script for Murmur (Coswara).
-
-This script segments Coswara breathing recordings into
-SHORT and LONG gesture classes using dataset-provided
-semantic labels:
-
-- breathing-shallow.wav → short puff
-- breathing-deep.wav    → long puff
-
-Rationale:
-Coswara breathing recordings contain a single instructed
-gesture per file. Duration-based or percentile-based
-segmentation is therefore unnecessary and unreliable.
-
-Input structure:
-  Coswara-Data-master/YYYYMMDD/YYYYMMDD/<subject_id>/breathing-*.wav
-
-Output structure:
-  data_segments/<subject_id>/{short,long}/breathing-*.wav
-
-Manifest:
-  manifests/segments_2c.csv
-"""
-
 import argparse
 import pathlib
 import pandas as pd
@@ -31,6 +5,13 @@ import librosa
 import soundfile as sf
 
 def run(in_root, out_root, manifest_csv, sr=16000):
+    """Segment Coswara breathing recordings into short/long gesture clips.
+ 
+    Assigns class labels from the dataset filename convention:
+    ``breathing-shallow.wav`` -> ``short``, ``breathing-deep.wav`` -> ``long``.
+    Clips are written to ``<out_root>/<subject_id>/<label>/`` and a manifest
+    CSV is saved at ``manifest_csv``.
+    """
     in_root = pathlib.Path(in_root)
     out_root = pathlib.Path(out_root)
     rows = []
@@ -86,7 +67,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
     ).to_csv(manifest_csv, index=False)
 
     print(f"[DONE] kept {kept} clips | skipped {skipped}")
-    print(f"Saved → {manifest_csv}")
+    print(f"Saved -> {manifest_csv}")
 
 
 if __name__ == "__main__":

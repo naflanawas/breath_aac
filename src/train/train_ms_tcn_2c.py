@@ -1,6 +1,6 @@
+# MS-TCN model definition, dataset class, and training loop for two-class breath gesture classification.
 import argparse
 import os, random
-from comet_ml import Experiment
 import numpy as np
 import pandas as pd
 import torch
@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import accuracy_score, f1_score
+from src.utils.device import pick_device
 
 # reproducibility 
 SEED = 7
@@ -23,7 +24,14 @@ torch.backends.cudnn.benchmark = False
 
 #  DATASET 
 class MelClipSet(Dataset):
-    def __init__(self, split_csv, split, max_len=256, classes=None):
+    """PyTorch Dataset for pre-extracted Mel+Delta/DeltaDelta feature clips."""
+    def __init__(self, split_csv, split, max_len=1024, classes=None):
+        """Args:
+            split_csv: Path to the manifest CSV with columns filepath/label/split.
+            split: Which partition to load ('train', 'val', or 'test').
+            max_len: Fixed temporal length in frames (pad or truncate).
+            classes: Ordered list of class names; inferred from train rows if None.
+        """
         df = pd.read_csv(split_csv)
         self.df = df[df["split"] == split].reset_index(drop=True)
 
@@ -35,18 +43,15 @@ class MelClipSet(Dataset):
         self.max_len = max_len
 
     def __len__(self):
+        """Return the number of clips in this split."""
         return len(self.df)
 
     def __getitem__(self, i):
+        """Return (feature_tensor, label_index) for clip i."""
         row = self.df.iloc[i]
         x = np.load(row["filepath"])  # [3, 64, T]
 
-        # CMVN (per-clip normalization) 
-        mean = x.mean(axis=(1, 2), keepdims=True)
-        std  = x.std(axis=(1, 2), keepdims=True) + 1e-8
-        x = (x - mean) / std
-
-        # Pad / Crop 
+        # Pad / Crop
         T = x.shape[-1]
         if T < self.max_len:
             pad = np.zeros((x.shape[0], x.shape[1], self.max_len - T), dtype=x.dtype)
@@ -72,7 +77,16 @@ class MelClipSet(Dataset):
 
 # MODEL
 class TCNBlock(nn.Module):
+    """Residual dilated temporal convolution block.
+    Applies two 1xk Conv2d layers (dilation along the time axis) and adds
+    the input as a residual skip connection.
+    """
     def __init__(self, ch, k=3, dil=1):
+        """Args:
+            ch: Number of input/output channels.
+            k: Temporal kernel size.
+            dil: Temporal dilation factor.
+        """
         super().__init__()
         pad = ((k - 1) // 2) * dil
         self.net = nn.Sequential(
@@ -83,11 +97,27 @@ class TCNBlock(nn.Module):
         )
 
     def forward(self, x):
+        """Apply residual TCN block: output = x + conv(x)."""
         return x + self.net(x)
 
-
 class MSTCN(nn.Module):
+    """Multi-Scale Temporal Convolutional Network for breath gesture classification.
+ 
+    Architecture:
+        1. Stem - two Conv2d layers for local 2-D feature extraction.
+        2. Branches - one TCNBlock pair per dilation value, run in parallel.
+        3. Fuse - 1x1 Conv2d to merge all branch outputs.
+        4. Pool - AdaptiveAvgPool2d to (1,1).
+        5. Embed - linear projection.
+        6. Classifier - linear head (omitted when return_embedding=True).
+    """
     def __init__(self, in_ch=3, base=64, n_classes=2, dilations=(1, 2, 4, 8)):
+        """Args:
+            in_ch: Number of input channels (3 for log-Mel+Delta+DeltaDelta).
+            base: Base channel width.
+            n_classes: Number of output classes.
+            dilations: Tuple of temporal dilation factors for the parallel branches.
+        """
         super().__init__()
         self.stem = nn.Sequential(
             nn.Conv2d(in_ch, base, (5, 5), padding=(2, 2)),
@@ -110,29 +140,31 @@ class MSTCN(nn.Module):
 
 
     def forward(self, x, return_embedding=False):
+        """Forward pass."""
         h = self.stem(x)
         feats = [b(h) for b in self.branches]
         h = torch.cat(feats, dim=1)
         h = self.fuse(h)
-
         h = self.pool(h)
-        h = h.view(h.size(0), -1)
-        emb = self.embed(h)
+        h = h.view(h.size(0), -1)   # [B, 64]
 
         if return_embedding:
-            return emb
-        return self.classifier(emb)
+            return h
 
-
-
-# UTILS 
-def pick_device():
-    if torch.cuda.is_available():
-        return "cuda"
-    return "cpu"
-
+        h = self.embed(h)
+        return self.classifier(h)
 
 def class_weights(split_csv, classes):
+    """Compute inverse-frequency class weights for weighted CrossEntropyLoss.
+ 
+    Args:
+        split_csv: Manifest CSV with label/split columns.
+        classes: Ordered list of class names.
+ 
+    Returns:
+        Float32 tensor of shape (len(classes),) normalised so weights sum to
+        len(classes).
+    """
     df = pd.read_csv(split_csv)
     tr = df[df.split == "train"].label.value_counts().to_dict()
     counts = torch.tensor([tr.get(c, 1) for c in classes], dtype=torch.float32)
@@ -141,6 +173,7 @@ def class_weights(split_csv, classes):
 
 
 def evaluate(model, loader, device):
+    """Evaluate model on a DataLoader; return (accuracy, macro-F1)."""
     model.eval()
     ys, ps = [], []
     with torch.no_grad():
@@ -155,31 +188,7 @@ def evaluate(model, loader, device):
 
 # TRAIN
 def main(a):
-    experiment = Experiment(
-        api_key="Afgr4QNCGTlUT1zmEZvwWUcwz",
-        project_name="murmur-breath-aac",
-        workspace="nafla-fathima"
-    )
-
-    experiment.set_name("ms_tcn_global_subjectwise")
-    experiment.add_tag("global_model")
-    experiment.add_tag("subjectwise_split")
-
-    # Log hyperparameters
-    hyper_params = {
-        "epochs": a.epochs,
-        "batch_size": a.bs,
-        "max_len": a.max_len,
-        "learning_rate": a.lr,
-        "patience": a.patience,
-        "split_csv": a.split_csv,
-        "model": "MS-TCN",
-        "task": "2-class breath (short vs long)"
-    }
-
-    experiment.log_parameters(hyper_params)
-
-    # metric logging
+    """Train the MS-TCN model."""
     train_losses = []
     val_accs = []
     val_f1s = []
@@ -234,10 +243,6 @@ def main(a):
             f"val_f1 {va_f1:.3f}"
         )
 
-        experiment.log_metric("train_loss", avg_train_loss, step=ep)
-        experiment.log_metric("val_accuracy", va_acc, step=ep)
-        experiment.log_metric("val_f1", va_f1, step=ep)
-
         if va_f1 > best_f1:
             best_f1 = va_f1
             bad = 0
@@ -257,10 +262,6 @@ def main(a):
     te_acc, te_f1 = evaluate(model, te, device)
     print(f"TEST acc {te_acc:.3f} | TEST f1 {te_f1:.3f}")
 
-    experiment.log_metric("test_accuracy", te_acc)
-    experiment.log_metric("test_f1", te_f1)
-    experiment.end()
-
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -270,19 +271,16 @@ if __name__ == "__main__":
     ap.add_argument("--max_len", type=int, default=1024)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--patience", type=int, default=6)
-    ap.add_argument("--ckpt", default="models/ms_tcn_cmvn_aug.pt")
+    ap.add_argument("--ckpt", default="models/ms_tcn_no_cmvn.pt")
 
-    # Check if running in an interactive notebook environment (e.g., Colab)
-    # In such an environment, sys.argv might not contain expected command-line arguments.
-    # We provide explicit default arguments for interactive execution.
-    if '__file__' not in globals(): # Heuristic for notebook environment
+    if '__file__' not in globals(): 
         args = ap.parse_args([
             "--split_csv", "manifests/split_2c_subjectwise.csv",
             "--max_len", "1024",
             "--bs", "8",
-            "--ckpt", "models/ms_tcn_cmvn_aug.pt" # Default checkpoint name for this updated script
+            "--ckpt", "models/ms_tcn_no_cmvn.pt"
         ])
     else:
-        args = ap.parse_args() # For command-line execution, use sys.argv
+        args = ap.parse_args() 
 
     main(args)

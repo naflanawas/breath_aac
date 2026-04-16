@@ -1,7 +1,10 @@
-import numpy as np, librosa, argparse
+import argparse
+import librosa
+import numpy as np
 from pathlib import Path
 
 def mel_delta_features(y, sr=16000, n_fft=1024, hop=256, n_mels=64, fmin=50, fmax=8000):
+    """Compute stacked log-Mel / delta / delta-delta features from a waveform."""
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=n_fft, hop_length=hop,
                                        n_mels=n_mels, fmin=fmin, fmax=fmax)
     S_db = librosa.power_to_db(S, ref=np.max).astype(np.float32)

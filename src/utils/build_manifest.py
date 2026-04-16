@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 
 def relpath(p: Path, base: Path) -> str:
+    """Return path of p relative to base, falling back to the absolute path."""
     try:
         return str(p.resolve().relative_to(base.resolve()))
     except Exception:
@@ -32,7 +33,6 @@ def main():
 
     for w in wavs:
         stem = w.stem  # filename without extension
-        # expected mel path: features/mel/<stem>.npy
         expected = mel_root / f"{stem}.npy"
         mel_path = expected if expected.exists() else None
         if mel_path is None:

@@ -1,77 +1,132 @@
+# Evaluates ProtoNet-style personalization on top of a trained MSTCN checkpoint.
 import argparse, numpy as np, pandas as pd, torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score
 from src.train.train_ms_tcn_2c import MSTCN, MelClipSet
+from src.utils.device import pick_device
 
 def embed_batch(model, X):
+    """Extract intermediate embeddings from MSTCN (before the classifier head).
+ 
+    Runs the stem -> branches -> fuse -> pool pipeline and returns the flattened
+    feature vector.  Used by ProtoNet for prototype building and similarity scoring.
+ 
+    Args:
+        model: MSTCN instance.
+        X: Input tensor of shape (B, in_ch, n_mels, T).
+ 
+    Returns:
+        Tensor of shape (B, D) where D is the pool output dimension.
+    """
     h = model.stem(X)
     feats = [b(h) for b in model.branches]
     h = torch.cat(feats, dim=1)
     h = model.fuse(h)
     h = model.pool(h)
     h = h.view(h.size(0), -1)
-    return h               # [B, D]
+    return h            
 
-def few_shot_eval(split_csv, ckpt, shots=5, max_len=256, seed=7):
+def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
     df = pd.read_csv(split_csv)
-    classes = sorted(df[df.split=="train"]["label"].unique())
-    device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-
-    # pick 'shots' samples per class from TRAIN as support; evaluate on VAL as queries
-    tr = df[df.split=="train"].copy()
-    va = df[df.split=="val"].copy()
-
-    support_rows=[]
-    for c in classes:
-        pool = tr[tr.label==c]
-        take = min(shots, len(pool))
-        support_rows.append(pool.sample(take, random_state=seed))
-    support = pd.concat(support_rows)
-
-    sup_set = MelClipSet(split_csv, "train", max_len=max_len, classes=classes)
-    qry_set = MelClipSet(split_csv, "test",   max_len=max_len, classes=classes)
-
-    sup_idx = sup_set.df.index[sup_set.df.filepath.isin(support.filepath)]
-    sup_loader = DataLoader(torch.utils.data.Subset(sup_set, sup_idx), batch_size=32, shuffle=False)
-    qry_loader = DataLoader(qry_set, batch_size=32, shuffle=False)
+    classes = sorted(df[df.split == "train"]["label"].unique())
+    c2i = {c: i for i, c in enumerate(classes)}
+    device = pick_device()
 
     model = MSTCN(in_ch=3, n_classes=len(classes)).to(device)
-    state_dict = torch.load(ckpt, map_location=device)
-    model.load_state_dict(state_dict, strict=False)
+    model.load_state_dict(torch.load(ckpt, map_location=device), strict=False)
     model.eval()
 
-    # build class prototypes (mean embedding per class)
-    protos = {}
-    with torch.no_grad():
-        for X,y in sup_loader:
-            X=X.to(device); y=y.to(device)
-            E = embed_batch(model, X)  # [B, D]
-            for e, yi in zip(E, y):
-                c = classes[int(yi)]
-                protos.setdefault(c, []).append(e.cpu().numpy())
-    for c in protos:
-        protos[c] = np.mean(np.stack(protos[c], axis=0), axis=0)
+    test_df = df[df.split == "test"].copy()
+    subjects = sorted(test_df["subject_id"].unique())
 
-    # classify VAL by nearest prototype (cosine similarity)
-    ys=[]; ps=[]
-    with torch.no_grad():
-        for X,y in qry_loader:
-            X=X.to(device); y=y.to(device)
-            E = embed_batch(model, X).cpu().numpy()
-            for e, yi in zip(E, y.cpu().numpy()):
-                sims=[np.dot(e,protos[c])/(np.linalg.norm(e)*np.linalg.norm(protos[c])+1e-9) for c in classes]
-                ps.append(int(np.argmax(sims))); ys.append(int(yi))
+    rng = np.random.default_rng(seed)
 
-    acc = accuracy_score(ys, ps)
-    f1  = f1_score(ys, ps, average="macro")
-    return acc, f1
+    all_true_global, all_pred_global = [], []
+    all_true_proto,  all_pred_proto  = [], []
 
+    def load_embed(path):
+        """Load a .npy feature file, apply padding, and return its embedding."""
+        x = np.load(path) # [3, 64, T]
+        T = x.shape[-1]
+        if T < max_len:
+            pad = np.zeros((3, 64, max_len - T), dtype=x.dtype)
+            x = np.concatenate([x, pad], axis=-1)
+        else:
+            x = x[:, :, :max_len]
+        X = torch.from_numpy(x).unsqueeze(0).to(device)
+        with torch.no_grad():
+            emb = embed_batch(model, X) # [1, D]
+        return emb[0].cpu().numpy()
+
+    skipped = 0
+    for sid in subjects:
+        sdf = test_df[test_df["subject_id"] == sid]
+
+        # collect embeddings per class
+        class_embs = {}
+        for c in classes:
+            rows = sdf[sdf["label"] == c]
+            if len(rows) == 0:
+                break
+            embs = [load_embed(r["filepath"]) for _, r in rows.iterrows()]
+            class_embs[c] = embs
+
+        if len(class_embs) < len(classes):
+            skipped += 1
+            continue
+
+        # build prototype from first 'shots' embeddings
+        protos = {}
+        queries = {}
+        for c in classes:
+            embs = class_embs[c]
+            k = min(shots, len(embs))
+            support_idx = rng.choice(len(embs), k, replace=False)
+            query_idx   = [i for i in range(len(embs)) if i not in support_idx]
+            protos[c]   = np.mean([embs[i] for i in support_idx], axis=0)
+            queries[c]  = [embs[i] for i in query_idx] if query_idx else [embs[support_idx[-1]]]
+
+        # classify queries
+        for c in classes:
+            yi = c2i[c]
+            for e in queries[c]:
+                # ProtoNet (cosine)
+                sims = [np.dot(e, protos[cc]) /
+                        (np.linalg.norm(e) * np.linalg.norm(protos[cc]) + 1e-9)
+                        for cc in classes]
+                all_pred_proto.append(int(np.argmax(sims)))
+                all_true_proto.append(yi)
+
+                # Global model (softmax head)
+                x_t = torch.from_numpy(
+                    np.load(sdf[sdf["label"] == c].iloc[0]["filepath"])
+                ).unsqueeze(0).to(device)
+                # pad/crop
+                if x_t.shape[-1] < max_len:
+                    pad = torch.zeros(1, 3, 64, max_len - x_t.shape[-1])
+                    x_t = torch.cat([x_t, pad], dim=-1)
+                else:
+                    x_t = x_t[:, :, :, :max_len]
+                with torch.no_grad():
+                    logits = model(x_t)
+                all_pred_global.append(int(logits.argmax(1).cpu()))
+                all_true_global.append(yi)
+
+    print(f"Evaluated: {len(subjects)-skipped} subjects | Skipped: {skipped}")
+
+    acc_g = accuracy_score(all_true_global, all_pred_global)
+    f1_g  = f1_score(all_true_global, all_pred_global, average="macro")
+    acc_p = accuracy_score(all_true_proto, all_pred_proto)
+    f1_p  = f1_score(all_true_proto,  all_pred_proto,  average="macro")
+
+    return acc_g, f1_g, acc_p, f1_p
 if __name__=="__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--split_csv", default="manifests/split_2c.csv")
     ap.add_argument("--ckpt", default="models/ms_tcn_2c.pt")
     ap.add_argument("--shots", type=int, default=5)
-    ap.add_argument("--max_len", type=int, default=256)
+    ap.add_argument("--max_len", type=int, default=1024)
     a = ap.parse_args()
-    acc, f1 = few_shot_eval(a.split_csv, a.ckpt, shots=a.shots, max_len=a.max_len)
-    print(f"ProtoNet {a.shots}-shot  VAL acc={acc:.3f}  f1={f1:.3f}")
+    acc_g, f1_g, acc_p, f1_p = few_shot_eval(a.split_csv, a.ckpt, shots=a.shots, max_len=a.max_len)
+    print(f"Global   acc={acc_g:.3f}  f1={f1_g:.3f}")
+    print(f"ProtoNet {a.shots}-shot  acc={acc_p:.3f}  f1={f1_p:.3f}")

@@ -22,6 +22,7 @@ val_s   = set(subjects[n_train:n_train + n_val])
 test_s  = set(subjects[n_train + n_val:])
 
 def assign_split(subject_id):
+    """Return the split name ('train', 'val', or 'test') for a subject."""
     if subject_id in train_s:
         return "train"
     if subject_id in val_s:
@@ -48,7 +49,6 @@ print(f"Dropped {before - after} samples due to missing features")
 out_path = "manifests/split_2c_subjectwise.csv"
 seg.to_csv(out_path, index=False)
 
-# Summary
 print("\nSaved:", out_path)
 print("\nSamples per split:")
 print(seg["split"].value_counts())

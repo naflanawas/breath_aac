@@ -4,21 +4,11 @@ import numpy as np
 import librosa
 import pandas as pd
 from tqdm import tqdm
-
-def mel_delta_features(y, sr=16000, n_fft=1024, hop=256, n_mels=64, fmin=50, fmax=8000):
-    S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=n_fft, hop_length=hop,
-                                       n_mels=n_mels, fmin=fmin, fmax=fmax)
-    S_db = librosa.power_to_db(S, ref=np.max).astype(np.float32)      # [n_mels, T]
-    d1   = librosa.feature.delta(S_db, width=9).astype(np.float32)    # [n_mels, T]
-    d2   = librosa.feature.delta(S_db, order=2, width=9).astype(np.float32)
-    feat = np.stack([S_db, d1, d2], axis=0)                            # [3, n_mels, T]  ✅
-    return feat
+from src.features.mel_delta import mel_delta_features
 
 def main():
     ap = argparse.ArgumentParser()
-    # Use manifest of segmented clips (recommended)
     ap.add_argument("--manifest", help="CSV with at least a 'filepath' column; optional 'label'")
-    # Or fallback to scanning a directory tree (e.g., clips/)
     ap.add_argument("--in_root", help="Folder to scan for .wav if manifest not provided (expects clips/<label>/*.wav)")
     ap.add_argument("--out_root", required=True, help="Folder to save .npy features, e.g., features/mel_dd")
     ap.add_argument("--sr", type=int, default=16000)
@@ -50,7 +40,7 @@ def main():
         raise ValueError("Provide either --manifest or --in_root")
 
     done = skipped = failed = 0
-    for w, label in tqdm(records, desc="Mel+Δ/ΔΔ (stacked)"):
+    for w, label in tqdm(records, desc="Mel+Delta/DeltaDelta (stacked)"):
         subject = w.parent.parent.name  
         out_path = out_root / subject / label / f"{w.stem}.npy"
 

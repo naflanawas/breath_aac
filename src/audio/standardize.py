@@ -10,6 +10,7 @@ SHORT_SAMPLES = int(0.8 * SR)
 LONG_SAMPLES  = int(2.5 * SR)   
 
 def pad_or_crop(y, target_len):
+    """Centre-crop or symmetrically zero-pad a waveform to exactly target_len samples."""
     cur = len(y)
 
     if cur == target_len:
@@ -19,13 +20,13 @@ def pad_or_crop(y, target_len):
         start = (cur - target_len) // 2
         return y[start:start + target_len]
 
-    # pad
     pad_total = target_len - cur
     left = pad_total // 2
     right = pad_total - left
     return np.pad(y, (left, right), mode="constant")
 
 def standardize(in_path: Path, out_path: Path) -> bool:
+    """Load, peak-normalise, and length-standardise one audio clip."""
     try:
         y, _ = librosa.load(str(in_path), sr=SR, mono=True)
     except Exception as e:
