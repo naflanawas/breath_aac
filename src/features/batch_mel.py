@@ -7,7 +7,7 @@ from tqdm import tqdm
 from src.features.mel_delta import mel_delta_features
 
 def main():
-    """CLI entry point: extract Mel+Δ/ΔΔ features for a batch of WAV files.
+    """CLI entry point: extract Mel+Delta/DeltaDelta features for a batch of WAV files.
  
     Accepts either a manifest CSV (``--manifest``) with a ``filepath`` column
     or a directory tree (``--in_root``).  Saves one ``.npy`` per clip under
@@ -48,7 +48,7 @@ def main():
         raise ValueError("Provide either --manifest or --in_root")
 
     done = skipped = failed = 0
-    for w, label in tqdm(records, desc="Mel+Δ/ΔΔ (stacked)"):
+    for w, label in tqdm(records, desc="Mel+Delta/DeltaDelta (stacked)"):
         subject = w.parent.parent.name  
         out_path = out_root / subject / label / f"{w.stem}.npy"
 

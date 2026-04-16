@@ -6,8 +6,8 @@ This script segments Coswara breathing recordings into
 SHORT and LONG gesture classes using dataset-provided
 semantic labels:
 
-- breathing-shallow.wav → short puff
-- breathing-deep.wav    → long puff
+- breathing-shallow.wav -> short puff
+- breathing-deep.wav    -> long puff
 
 Rationale:
 Coswara breathing recordings contain a single instructed
@@ -34,7 +34,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
     """Segment Coswara breathing recordings into short/long gesture clips.
  
     Assigns class labels from the dataset filename convention:
-    ``breathing-shallow.wav`` → ``short``, ``breathing-deep.wav`` → ``long``.
+    ``breathing-shallow.wav`` -> ``short``, ``breathing-deep.wav`` -> ``long``.
     Clips are written to ``<out_root>/<subject_id>/<label>/`` and a manifest
     CSV is saved at ``manifest_csv``.
  
@@ -99,7 +99,7 @@ def run(in_root, out_root, manifest_csv, sr=16000):
     ).to_csv(manifest_csv, index=False)
 
     print(f"[DONE] kept {kept} clips | skipped {skipped}")
-    print(f"Saved → {manifest_csv}")
+    print(f"Saved -> {manifest_csv}")
 
 
 if __name__ == "__main__":

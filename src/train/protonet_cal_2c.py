@@ -8,7 +8,7 @@ from src.utils.device import pick_device
 def embed_batch(model, X):
     """Extract intermediate embeddings from MSTCN (before the classifier head).
  
-    Runs the stem → branches → fuse → pool pipeline and returns the flattened
+    Runs the stem -> branches -> fuse -> pool pipeline and returns the flattened
     feature vector.  Used by ProtoNet for prototype building and similarity scoring.
  
     Args:

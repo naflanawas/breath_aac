@@ -1,5 +1,5 @@
 """
-MURMUR ProtoNet Evaluation — Two complementary experiments.
+MURMUR ProtoNet Evaluation - Two complementary experiments.
 
 Experiment 1: Per-subject personalisation
   For each test subject:
@@ -65,7 +65,7 @@ def cosine_predict(emb, protos, classes):
     return int(np.argmax(sims))
 
 
-# ── EXPERIMENT 1: Per-subject personalisation ────────────────────────────────
+#  EXPERIMENT 1: Per-subject personalisation 
 
 def experiment1_per_subject(test_df, classes, c2i, model, max_len, device):
     """
@@ -144,23 +144,23 @@ def experiment1_per_subject(test_df, classes, c2i, model, max_len, device):
     print(f"{'-'*34}")
     print(f"{'Global':<14} {acc_g:>8.3f} {f1_g:>10.3f}")
     print(f"{'ProtoNet':<14} {acc_p:>8.3f} {f1_p:>10.3f}")
-    print(f"{'ΔF1':<14} {acc_p-acc_g:>+8.3f} {f1_p-f1_g:>+10.3f}")
+    print(f"{'DeltaF1':<14} {acc_p-acc_g:>+8.3f} {f1_p-f1_g:>+10.3f}")
     print(f"\nPer-subject outcome (out of {total} subjects):")
     print(f"  Improved  (ProtoNet correct, Global wrong): {improved:>4}  ({improved/total*100:.1f}%)")
     print(f"  Unchanged (both correct or both wrong)    : {unchanged:>4}  ({unchanged/total*100:.1f}%)")
     print(f"  Degraded  (Global correct, ProtoNet wrong): {degraded:>4}  ({degraded/total*100:.1f}%)")
 
-    print(f"\nClassification report — Global model:")
+    print(f"\nClassification report - Global model:")
     print(classification_report(all_true_g, all_pred_g,
                                 target_names=classes, digits=3))
-    print(f"Classification report — ProtoNet (1-shot):")
+    print(f"Classification report - ProtoNet (1-shot):")
     print(classification_report(all_true_p, all_pred_p,
                                 target_names=classes, digits=3))
 
     return acc_g, f1_g, acc_p, f1_p, improved, unchanged, degraded
 
 
-# ── EXPERIMENT 2: Cross-subject few-shot generalisation ──────────────────────
+#  EXPERIMENT 2: Cross-subject few-shot generalisation 
 
 def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
                                shot_counts=(1, 3, 5, 10), n_trials=N_TRIALS,
@@ -203,10 +203,10 @@ def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
 
     print("\n" + "=" * 66)
     print("EXPERIMENT 2: Cross-subject few-shot generalisation")
-    print(f"Global baseline — Acc: {GLOBAL_BASELINE_ACC:.3f} | F1: {GLOBAL_BASELINE_F1:.3f}")
+    print(f"Global baseline - Acc: {GLOBAL_BASELINE_ACC:.3f} | F1: {GLOBAL_BASELINE_F1:.3f}")
     print("=" * 66)
     print(f"{'Shots':>6} | {'Mean Acc':>9} | {'Mean F1':>8} | "
-          f"{'Std F1':>7} | {'ΔF1 vs baseline':>16}")
+          f"{'Std F1':>7} | {'DeltaF1 vs baseline':>16}")
     print("-" * 56)
 
     all_results = []
@@ -253,7 +253,7 @@ def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
     return all_results
 
 
-# ── MAIN ─────────────────────────────────────────────────────────────────────
+#  MAIN 
 
 def main():
     """CLI entry point: run repeated few-shot ProtoNet evaluation and print a summary table."""

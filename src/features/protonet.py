@@ -5,7 +5,7 @@ def compute_prototypes(embeddings, labels, n_classes):
     """
     embeddings: [N, D]
     labels:     [N]
-    Returns:    [C, D] — mean embedding per class (L2-normalised for cosine)
+    Returns:    [C, D] - mean embedding per class (L2-normalised for cosine)
     """
     prototypes = []
     for c in range(n_classes):
@@ -19,7 +19,7 @@ def prototypical_predict(query_embeddings, prototypes):
     """
     query_embeddings: [Q, D]
     prototypes:       [C, D]  (should be L2-normalised)
-    Returns:          [Q]  — predicted class indices
+    Returns:          [Q]  - predicted class indices
     """
     q = F.normalize(query_embeddings, dim=1)   # [Q, D]
     sims = q @ prototypes.T                    # [Q, C] cosine similarity

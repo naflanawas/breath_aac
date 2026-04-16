@@ -24,7 +24,7 @@ torch.backends.cudnn.benchmark = False
 
 #  DATASET 
 class MelClipSet(Dataset):
-    """PyTorch Dataset for pre-extracted Mel+Δ/ΔΔ feature clips."""
+    """PyTorch Dataset for pre-extracted Mel+Delta/DeltaDelta feature clips."""
     def __init__(self, split_csv, split, max_len=1024, classes=None):
         """Args:
             split_csv: Path to the manifest CSV with columns filepath/label/split.
@@ -78,7 +78,7 @@ class MelClipSet(Dataset):
 # MODEL
 class TCNBlock(nn.Module):
     """Residual dilated temporal convolution block.
-    Applies two 1×k Conv2d layers (dilation along the time axis) and adds
+    Applies two 1xk Conv2d layers (dilation along the time axis) and adds
     the input as a residual skip connection.
     """
     def __init__(self, ch, k=3, dil=1):
@@ -104,16 +104,16 @@ class MSTCN(nn.Module):
     """Multi-Scale Temporal Convolutional Network for breath gesture classification.
  
     Architecture:
-        1. Stem — two Conv2d layers for local 2-D feature extraction.
-        2. Branches — one TCNBlock pair per dilation value, run in parallel.
-        3. Fuse — 1×1 Conv2d to merge all branch outputs.
-        4. Pool — AdaptiveAvgPool2d to (1,1).
-        5. Embed — linear projection.
-        6. Classifier — linear head (omitted when return_embedding=True).
+        1. Stem - two Conv2d layers for local 2-D feature extraction.
+        2. Branches - one TCNBlock pair per dilation value, run in parallel.
+        3. Fuse - 1x1 Conv2d to merge all branch outputs.
+        4. Pool - AdaptiveAvgPool2d to (1,1).
+        5. Embed - linear projection.
+        6. Classifier - linear head (omitted when return_embedding=True).
     """
     def __init__(self, in_ch=3, base=64, n_classes=2, dilations=(1, 2, 4, 8)):
         """Args:
-            in_ch: Number of input channels (3 for log-Mel+Δ+ΔΔ).
+            in_ch: Number of input channels (3 for log-Mel+Delta+DeltaDelta).
             base: Base channel width.
             n_classes: Number of output classes.
             dilations: Tuple of temporal dilation factors for the parallel branches.

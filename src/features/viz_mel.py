@@ -3,7 +3,7 @@
 import argparse, glob, os, numpy as np, matplotlib.pyplot as plt
 
 def show_one(npy_path, sr=16000, hop=256, out_dir="viz"):
-    """Save a three-panel plot (log-Mel, Δ, ΔΔ) for one feature .npy file.
+    """Save a three-panel plot (log-Mel, Delta, DeltaDelta) for one feature .npy file.
  
     Args:
         npy_path: Path to a (3, n_mels, T) .npy file.
@@ -17,13 +17,13 @@ def show_one(npy_path, sr=16000, hop=256, out_dir="viz"):
     T = x.shape[-1]
     extent = [0, T*sec_per_frame, 0, x.shape[1]]  # x in seconds, y in mel bins
 
-    titles = ["Log-Mel", "Delta (Δ)", "Delta-Delta (ΔΔ)"]
+    titles = ["Log-Mel", "Delta (Delta)", "Delta-Delta (DeltaDelta)"]
     outs   = ["mel_log.png", "mel_delta.png", "mel_deltadelta.png"]
 
     for i in range(3):
         plt.figure()
         im = plt.imshow(x[i], aspect="auto", origin="lower", extent=extent, interpolation="nearest")
-        plt.title(f"{titles[i]} — {os.path.basename(npy_path)}")
+        plt.title(f"{titles[i]} - {os.path.basename(npy_path)}")
         plt.xlabel("Time (s)")
         plt.ylabel("Mel bins")
         plt.colorbar(im, fraction=0.046, pad=0.04)

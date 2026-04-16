@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 
-# ── EDIT THIS PATH ──────────────────────────────────────────────
+#  EDIT THIS PATH 
 VERIFICATION_DIR = os.path.expanduser("~/Documents/augmentation_verification")
 OUT_DIR          = os.path.expanduser("~/Documents/augmentation_verification")
-# ────────────────────────────────────────────────────────────────
+# 
 
 VARIANTS = [
     "1_original",
@@ -40,7 +40,7 @@ def make_diagram(subject_folder_name, gesture_key, gesture_label, out_dir):
     fig = plt.figure(figsize=(18, 8))
     fig.patch.set_facecolor('white')
     fig.suptitle(
-        f'Augmentation Verification — {gesture_label} — {subject_folder_name}\n'
+        f'Augmentation Verification - {gesture_label} - {subject_folder_name}\n'
         f'All 5 variants from same subject (confirmed test set, never used in training)',
         fontsize=12, fontweight='bold', y=0.98
     )
@@ -124,7 +124,7 @@ if not subject_folders:
 count = 0
 for sf_name in subject_folders:
     for gesture_key, gesture_label in GESTURES.items():
-        print(f"Generating diagram for: {sf_name} — {gesture_label}...")
+        print(f"Generating diagram for: {sf_name} - {gesture_label}...")
         make_diagram(sf_name, gesture_key, gesture_label, OUT_DIR)
         count += 1
 

@@ -7,7 +7,7 @@ def mel_delta_features(y, sr=16000, n_fft=1024, hop=256, n_mels=64, fmin=50, fma
     """Compute stacked log-Mel / delta / delta-delta features from a waveform.
  
     Args:
-        y: 1-D float32 waveform array (peak-normalised to ±1).
+        y: 1-D float32 waveform array (peak-normalised to +/-1).
         sr: Sample rate in Hz.
         n_fft: FFT window size.
         hop: Hop length in samples.
@@ -16,8 +16,8 @@ def mel_delta_features(y, sr=16000, n_fft=1024, hop=256, n_mels=64, fmin=50, fma
         fmax: Highest frequency for the Mel filterbank.
  
     Returns:
-        numpy array of shape (3, n_mels, T) — channels are
-        [log-Mel, Δ, ΔΔ], dtype float32.
+        numpy array of shape (3, n_mels, T) - channels are
+        [log-Mel, Delta, DeltaDelta], dtype float32.
     """
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=n_fft, hop_length=hop,
                                        n_mels=n_mels, fmin=fmin, fmax=fmax)

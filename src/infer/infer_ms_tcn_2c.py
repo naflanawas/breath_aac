@@ -70,7 +70,7 @@ if __name__ == "__main__":
     parser.add_argument("--wav",  required=True, help="Path to input WAV file")
     parser.add_argument("--ckpt", required=True, help="Path to model checkpoint")
     parser.add_argument("--max_len", type=int, default=1024,
-                        help="Temporal length — must match training (default: 1024)")
+                        help="Temporal length - must match training (default: 1024)")
     args = parser.parse_args()
 
     result = run_inference(args.wav, args.ckpt, args.max_len)

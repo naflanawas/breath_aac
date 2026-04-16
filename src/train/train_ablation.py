@@ -35,7 +35,7 @@ from sklearn.metrics import accuracy_score, f1_score
 from src.train.train_ms_tcn_2c import TCNBlock, MSTCN
 from src.utils.device import pick_device
 
-# ── Reproducibility ──────────────────────────────────────────────────────────
+#  Reproducibility 
 SEED = 7
 os.environ["PYTHONHASHSEED"] = str(SEED)
 random.seed(SEED)
@@ -47,10 +47,10 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark     = False
 
 
-# ── Dataset ──────────────────────────────────────────────────────────────────
+#  Dataset 
 
 class AblationDataset(Dataset):
-    """Dataset for ablation experiments — selectively disables CMVN, SpecAugment,
+    """Dataset for ablation experiments - selectively disables CMVN, SpecAugment,
     delta channels, or multi-scale dilation depending on the ``ablation`` flag."""
     def __init__(self, split_csv, split, max_len=1024, classes=None,
                  ablation="none"):
@@ -81,17 +81,17 @@ class AblationDataset(Dataset):
         row = self.df.iloc[idx]
         x   = np.load(row["filepath"])   # [3, 64, T]
 
-        # ── Ablation: no_delta → keep only channel 0 (log-Mel), zero others
+        #  Ablation: no_delta -> keep only channel 0 (log-Mel), zero others
         if self.ablation == "no_delta":
             x = x[0:1, :, :]   # shape becomes [1, 64, T]
 
-        # ── Ablation: no_cmvn → skip normalisation; otherwise apply CMVN
+        #  Ablation: no_cmvn -> skip normalisation; otherwise apply CMVN
         if self.ablation != "no_cmvn":
             mean = x.mean(axis=(1, 2), keepdims=True)
             std  = x.std(axis=(1, 2),  keepdims=True) + 1e-8
             x    = (x - mean) / std
 
-        # ── Pad / crop to max_len
+        #  Pad / crop to max_len
         T = x.shape[-1]
         if T < self.max_len:
             pad = np.zeros((x.shape[0], x.shape[1], self.max_len - T),
@@ -100,7 +100,7 @@ class AblationDataset(Dataset):
         else:
             x = x[:, :, :self.max_len]
 
-        # ── Ablation: no_augment → skip SpecAugment
+        #  Ablation: no_augment -> skip SpecAugment
         if self.split == "train" and self.ablation not in ("no_augment",):
             # frequency mask
             f  = np.random.randint(0, 8)
@@ -135,10 +135,10 @@ def evaluate(model, loader, device):
     return accuracy_score(ys, ps), f1_score(ys, ps, average="macro")
 
 
-# ── Train ─────────────────────────────────────────────────────────────────────
+#  Train 
 
 def main(a):
-    """Run one ablation condition end-to-end (train → val → test).
+    """Run one ablation condition end-to-end (train -> val -> test).
  
     Args:
         a: Parsed argparse namespace with split_csv, ablation, epochs, bs,
