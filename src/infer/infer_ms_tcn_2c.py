@@ -1,6 +1,3 @@
-"""
-Standalone inference script for MURMUR MS-TCN breath gesture classifier.
-"""
 import argparse
 import numpy as np
 import torch

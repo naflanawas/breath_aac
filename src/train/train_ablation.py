@@ -50,18 +50,8 @@ torch.backends.cudnn.benchmark     = False
 #  Dataset 
 
 class AblationDataset(Dataset):
-    """Dataset for ablation experiments - selectively disables CMVN, SpecAugment,
-    delta channels, or multi-scale dilation depending on the ``ablation`` flag."""
     def __init__(self, split_csv, split, max_len=1024, classes=None,
                  ablation="none"):
-        """Args:
-            split_csv: Manifest CSV with filepath/label/split columns.
-            split: Partition to load ('train', 'val', or 'test').
-            max_len: Fixed temporal length in frames.
-            classes: Class list; inferred from train rows if None.
-            ablation: One of 'none', 'no_delta', 'no_augment',
-                      'no_cmvn', 'single_scale'.
-        """
         df = pd.read_csv(split_csv)
         self.df = df[df["split"] == split].reset_index(drop=True)
         if classes is None:
@@ -138,12 +128,6 @@ def evaluate(model, loader, device):
 #  Train 
 
 def main(a):
-    """Run one ablation condition end-to-end (train -> val -> test).
- 
-    Args:
-        a: Parsed argparse namespace with split_csv, ablation, epochs, bs,
-           max_len, lr, patience fields.
-    """
     device  = pick_device()
     df      = pd.read_csv(a.split_csv)
     classes = sorted(df[df.split == "train"].label.unique())

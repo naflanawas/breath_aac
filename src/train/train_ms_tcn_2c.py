@@ -189,7 +189,6 @@ def evaluate(model, loader, device):
 # TRAIN
 def main(a):
     """Train the MS-TCN model."""
-    # metric logging
     train_losses = []
     val_accs = []
     val_f1s = []
@@ -274,10 +273,7 @@ if __name__ == "__main__":
     ap.add_argument("--patience", type=int, default=6)
     ap.add_argument("--ckpt", default="models/ms_tcn_no_cmvn.pt")
 
-    # Check if running in an interactive notebook environment (e.g., Colab)
-    # In such an environment, sys.argv might not contain expected command-line arguments.
-    # We provide explicit default arguments for interactive execution.
-    if '__file__' not in globals(): # Heuristic for notebook environment
+    if '__file__' not in globals(): 
         args = ap.parse_args([
             "--split_csv", "manifests/split_2c_subjectwise.csv",
             "--max_len", "1024",
@@ -285,6 +281,6 @@ if __name__ == "__main__":
             "--ckpt", "models/ms_tcn_no_cmvn.pt"
         ])
     else:
-        args = ap.parse_args() # For command-line execution, use sys.argv
+        args = ap.parse_args() 
 
     main(args)

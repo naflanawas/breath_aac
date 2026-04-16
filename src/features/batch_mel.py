@@ -7,16 +7,8 @@ from tqdm import tqdm
 from src.features.mel_delta import mel_delta_features
 
 def main():
-    """CLI entry point: extract Mel+Delta/DeltaDelta features for a batch of WAV files.
- 
-    Accepts either a manifest CSV (``--manifest``) with a ``filepath`` column
-    or a directory tree (``--in_root``).  Saves one ``.npy`` per clip under
-    ``--out_root/<subject>/<label>/``.
-    """
     ap = argparse.ArgumentParser()
-    # Use manifest of segmented clips (recommended)
     ap.add_argument("--manifest", help="CSV with at least a 'filepath' column; optional 'label'")
-    # Or fallback to scanning a directory tree (e.g., clips/)
     ap.add_argument("--in_root", help="Folder to scan for .wav if manifest not provided (expects clips/<label>/*.wav)")
     ap.add_argument("--out_root", required=True, help="Folder to save .npy features, e.g., features/mel_dd")
     ap.add_argument("--sr", type=int, default=16000)

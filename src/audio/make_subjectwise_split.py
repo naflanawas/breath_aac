@@ -49,7 +49,6 @@ print(f"Dropped {before - after} samples due to missing features")
 out_path = "manifests/split_2c_subjectwise.csv"
 seg.to_csv(out_path, index=False)
 
-# Summary
 print("\nSaved:", out_path)
 print("\nSamples per split:")
 print(seg["split"].value_counts())

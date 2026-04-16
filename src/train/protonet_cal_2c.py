@@ -27,13 +27,6 @@ def embed_batch(model, X):
     return h            
 
 def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
-    """
-    True few-shot personalisation eval.
-    For each TEST subject:
-      - use min(shots, available) clips per class as support
-      - remaining clips as queries
-    Compares ProtoNet vs global model on same queries.
-    """
     df = pd.read_csv(split_csv)
     classes = sorted(df[df.split == "train"]["label"].unique())
     c2i = {c: i for i, c in enumerate(classes)}
@@ -53,7 +46,7 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
 
     def load_embed(path):
         """Load a .npy feature file, apply padding, and return its embedding."""
-        x = np.load(path)                          # [3, 64, T]
+        x = np.load(path) # [3, 64, T]
         T = x.shape[-1]
         if T < max_len:
             pad = np.zeros((3, 64, max_len - T), dtype=x.dtype)
@@ -62,7 +55,7 @@ def few_shot_eval(split_csv, ckpt, shots=5, max_len=1024, seed=7):
             x = x[:, :, :max_len]
         X = torch.from_numpy(x).unsqueeze(0).to(device)
         with torch.no_grad():
-            emb = embed_batch(model, X)            # [1, D]
+            emb = embed_batch(model, X) # [1, D]
         return emb[0].cpu().numpy()
 
     skipped = 0

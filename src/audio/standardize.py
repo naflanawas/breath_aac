@@ -20,7 +20,6 @@ def pad_or_crop(y, target_len):
         start = (cur - target_len) // 2
         return y[start:start + target_len]
 
-    # pad
     pad_total = target_len - cur
     left = pad_total // 2
     right = pad_total - left

@@ -10,11 +10,6 @@ def relpath(p: Path, base: Path) -> str:
         return str(p.resolve())
 
 def main():
-    """CLI entry point: scan standardised WAVs and write a manifest CSV.
- 
-    Pairs each WAV with its corresponding Mel .npy file and writes rows with
-    columns: filepath, subject_id, label, split, std_wav, mel_npy.
-    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--std_root", required=True, help="Folder containing standardized WAVs (e.g., data_std/dates)")
     ap.add_argument("--mel_root", required=True, help="Folder containing Mel npy files (e.g., features/mel)")
@@ -38,7 +33,6 @@ def main():
 
     for w in wavs:
         stem = w.stem  # filename without extension
-        # expected mel path: features/mel/<stem>.npy
         expected = mel_root / f"{stem}.npy"
         mel_path = expected if expected.exists() else None
         if mel_path is None:

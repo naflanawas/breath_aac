@@ -24,11 +24,10 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report
 from src.train.train_ms_tcn_2c import MSTCN, pick_device
 from src.train.protonet_cal_2c import embed_batch
 
-# Known global model baseline from full test set eval (murmur-6.ipynb)
-GLOBAL_BASELINE_ACC = 0.718
-GLOBAL_BASELINE_F1  = 0.716
+GLOBAL_BASELINE_ACC = 0.726
+GLOBAL_BASELINE_F1  = 0.726
 
-N_TRIALS = 10  # repeat cross-subject eval N times, average results
+N_TRIALS = 10
 
 
 def preprocess(path, max_len):
@@ -161,19 +160,9 @@ def experiment1_per_subject(test_df, classes, c2i, model, max_len, device):
 
 
 #  EXPERIMENT 2: Cross-subject few-shot generalisation 
-
 def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
                                shot_counts=(1, 3, 5, 10), n_trials=N_TRIALS,
                                seed=7):
-    """
-    For k = 1, 3, 5, 10:
-      For each test subject as query:
-        - Sample k DIFFERENT subjects' embeddings per class as support
-        - Build prototype from those k support subjects
-        - Classify the query
-      Repeat n_trials times and average F1.
-      This tests genuine few-shot generalisation across subjects.
-    """
     subjects = sorted(test_df["subject_id"].unique())
     rng = np.random.default_rng(seed)
 
@@ -254,7 +243,6 @@ def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
 
 
 #  MAIN 
-
 def main():
     """CLI entry point: run repeated few-shot ProtoNet evaluation and print a summary table."""
     ap = argparse.ArgumentParser()

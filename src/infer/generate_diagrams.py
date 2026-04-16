@@ -8,10 +8,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 
-#  EDIT THIS PATH 
 VERIFICATION_DIR = os.path.expanduser("~/Documents/augmentation_verification")
 OUT_DIR          = os.path.expanduser("~/Documents/augmentation_verification")
-# 
 
 VARIANTS = [
     "1_original",
