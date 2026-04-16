@@ -1,3 +1,4 @@
+# Evaluates ProtoNet-style personalization on top of a trained MSTCN checkpoint.
 import argparse, numpy as np, pandas as pd, torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score

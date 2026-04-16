@@ -1,3 +1,4 @@
+# MS-TCN model definition, dataset class, and training loop for two-class breath gesture classification.
 import argparse
 import os, random
 import numpy as np

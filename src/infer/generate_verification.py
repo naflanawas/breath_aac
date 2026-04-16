@@ -4,6 +4,7 @@ import soundfile as sf
 import pandas as pd
 import os
 
+# Update these paths to match your local setup before running.
 SPLIT_CSV    = "/Users/nafla/Desktop/MURMUR/breath_aac/manifests/split_2c_subjectwise.csv"
 COSWARA_ROOT = "/Users/nafla/Desktop/MURMUR/breath_aac/data_segments"
 OUT_DIR      = os.path.expanduser("~/Documents/augmentation_verification")
