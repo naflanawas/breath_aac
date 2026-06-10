@@ -1,11 +1,11 @@
 """
-MURMUR ProtoNet Evaluation - Two complementary experiments.
+MURMUR ProtoNet Evaluation - Three complementary experiments.
 
 Experiment 1: Per-subject personalisation
   For each test subject:
     - Global model predicts on their sample (no personalisation)
     - ProtoNet uses their OWN sample as prototype, predicts same sample
-    - Shows per-subject improvement from personalisation
+    - Shows direct per-subject benefit of personalisation
 
 Experiment 2: Cross-subject few-shot generalisation
   For k = 1, 3, 5, 10:
@@ -15,6 +15,13 @@ Experiment 2: Cross-subject few-shot generalisation
         * Classify the query subject
     - Repeat N_TRIALS times and average
     - Produces genuine few-shot generalisation curve
+
+Experiment 3: ProtoNet vs fine-tuned linear head (controlled comparison)
+  Same cross-subject setup as Experiment 2 (same k values, trials, seed,
+  CMVN preprocessing, identical support sets per trial).
+  Fine-tune: trains a fresh nn.Linear(64, 2) on the k support embeddings
+  for 50 Adam steps (lr=0.01), then predicts the query.
+  Prints a side-by-side F1 comparison table.
 """
 import argparse
 import numpy as np
@@ -242,7 +249,132 @@ def experiment2_cross_subject(test_df, classes, c2i, model, max_len, device,
     return all_results
 
 
-#  MAIN 
+#  EXPERIMENT 3: ProtoNet vs fine-tuned linear head
+
+def experiment3_finetune_baseline(test_df, classes, c2i, model, max_len, device,
+                                   shot_counts=(1, 3, 5, 10), n_trials=N_TRIALS,
+                                   seed=7):
+    """
+    Cross-subject few-shot evaluation: ProtoNet vs fine-tuned linear head.
+
+    Identical setup to experiment2_cross_subject — same subjects, k values,
+    10 trials, seed 7, CMVN preprocessing. Both methods receive the EXACT
+    same support set on every trial so the comparison is controlled.
+
+    Fine-tune method: for each (trial, query_subject), train a fresh
+    nn.Linear(64, 2) on the k*2 support embeddings for 50 Adam steps
+    (lr=0.01), then classify the query.
+    """
+    subjects = sorted(test_df["subject_id"].unique())
+    rng = np.random.default_rng(seed)
+
+    # Pre-compute embeddings — same process as experiment2
+    print("\nPre-computing embeddings for experiment 3...")
+    subject_data = {}
+    skipped = 0
+    for sid in subjects:
+        sdf = test_df[test_df["subject_id"] == sid]
+        data = {}
+        valid = True
+        for c in classes:
+            rows = sdf[sdf["label"] == c]
+            if len(rows) == 0:
+                valid = False
+                break
+            _, emb = get_embedding(model, rows.iloc[0]["filepath"], max_len, device)
+            data[c] = emb
+        if valid:
+            subject_data[sid] = data
+        else:
+            skipped += 1
+
+    valid_subjects = list(subject_data.keys())
+    print(f"Valid subjects: {len(valid_subjects)} | Skipped: {skipped}")
+
+    print("\n" + "=" * 70)
+    print("EXPERIMENT 3: ProtoNet vs Fine-tune linear head (cross-subject)")
+    print(f"Fine-tune: nn.Linear(64, {len(classes)}), 50 steps, Adam lr=0.01")
+    print(f"Global baseline F1: {GLOBAL_BASELINE_F1:.3f}")
+    print("=" * 70)
+    print(f"{'Shots':>6} | {'Proto F1':>9} | {'FT F1':>8} | "
+          f"{'Std Proto':>10} | {'Std FT':>8} | {'FT-Proto':>9}")
+    print("-" * 62)
+
+    comparison = []
+    for k in shot_counts:
+        proto_f1s = []
+        ft_f1s    = []
+
+        for _ in range(n_trials):
+            all_true_p, all_pred_p = [], []
+            all_true_f, all_pred_f = [], []
+
+            for qry_sid in valid_subjects:
+                support_pool = [s for s in valid_subjects if s != qry_sid]
+
+                # Build support set — identical for both methods this iteration
+                support_embs = []   # [(emb_np, label_idx), ...]
+                protos       = {}
+                for c in classes:
+                    pool_c   = [s for s in support_pool if c in subject_data[s]]
+                    k_actual = min(k, len(pool_c))
+                    chosen   = rng.choice(len(pool_c), k_actual, replace=False)
+                    embs     = [subject_data[pool_c[i]][c] for i in chosen]
+                    protos[c] = np.mean(embs, axis=0)
+                    for e in embs:
+                        support_embs.append((e, c2i[c]))
+
+                # --- ProtoNet ---
+                for c in classes:
+                    emb  = subject_data[qry_sid][c]
+                    pred = cosine_predict(emb, protos, classes)
+                    all_true_p.append(c2i[c])
+                    all_pred_p.append(pred)
+
+                # --- Fine-tune linear head ---
+                X_sup = torch.tensor(
+                    np.stack([e for e, _ in support_embs]), dtype=torch.float32
+                )
+                y_sup = torch.tensor(
+                    [y for _, y in support_embs], dtype=torch.long
+                )
+
+                head   = torch.nn.Linear(64, len(classes))
+                opt_ft = torch.optim.Adam(head.parameters(), lr=0.01)
+                crit   = torch.nn.CrossEntropyLoss()
+                head.train()
+                for _step in range(50):
+                    opt_ft.zero_grad()
+                    crit(head(X_sup), y_sup).backward()
+                    opt_ft.step()
+
+                head.eval()
+                with torch.no_grad():
+                    for c in classes:
+                        X_q  = torch.tensor(
+                            subject_data[qry_sid][c], dtype=torch.float32
+                        ).unsqueeze(0)
+                        pred = int(head(X_q).argmax(1))
+                        all_true_f.append(c2i[c])
+                        all_pred_f.append(pred)
+
+            proto_f1s.append(f1_score(all_true_p, all_pred_p, average="macro"))
+            ft_f1s.append(   f1_score(all_true_f, all_pred_f, average="macro"))
+
+        mean_proto = float(np.mean(proto_f1s))
+        mean_ft    = float(np.mean(ft_f1s))
+        std_proto  = float(np.std(proto_f1s))
+        std_ft     = float(np.std(ft_f1s))
+        delta      = mean_ft - mean_proto
+
+        print(f"{k:>6} | {mean_proto:>9.3f} | {mean_ft:>8.3f} | "
+              f"{std_proto:>10.4f} | {std_ft:>8.4f} | {delta:>+9.3f}")
+        comparison.append((k, mean_proto, mean_ft, std_proto, std_ft, delta))
+
+    return comparison
+
+
+#  MAIN
 def main():
     """CLI entry point: run repeated few-shot ProtoNet evaluation and print a summary table."""
     ap = argparse.ArgumentParser()
@@ -273,6 +405,11 @@ def main():
     )
 
     experiment2_cross_subject(
+        test_df, classes, c2i, model, a.max_len, device,
+        shot_counts=[1, 3, 5, 10], n_trials=a.n_trials
+    )
+
+    experiment3_finetune_baseline(
         test_df, classes, c2i, model, a.max_len, device,
         shot_counts=[1, 3, 5, 10], n_trials=a.n_trials
     )
